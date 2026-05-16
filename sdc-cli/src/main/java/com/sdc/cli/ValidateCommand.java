@@ -28,10 +28,7 @@ public class ValidateCommand implements Runnable {
     @Override
     public void run() {
         // TODO (TASK-024): invoke SegyValidator, report errors with byte offset, set exit code.
-        System.err.println("[sdc validate] Not yet implemented — tracked in TASK-024.");
-        throw new picocli.CommandLine.ParameterException(
-                new picocli.CommandLine(this),
-                "validate subcommand not yet implemented (TASK-024)"
-        );
+        System.err.println("[sdc] Command not yet implemented. This feature will be available in a future release.");
+        System.exit(1);
     }
 }

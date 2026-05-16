@@ -28,10 +28,7 @@ public class InspectCommand implements Runnable {
     @Override
     public void run() {
         // TODO (TASK-025): use SegyIO to extract metadata and display as a formatted table.
-        System.err.println("[sdc inspect] Not yet implemented — tracked in TASK-025.");
-        throw new picocli.CommandLine.ParameterException(
-                new picocli.CommandLine(this),
-                "inspect subcommand not yet implemented (TASK-025)"
-        );
+        System.err.println("[sdc] Command not yet implemented. This feature will be available in a future release.");
+        System.exit(1);
     }
 }

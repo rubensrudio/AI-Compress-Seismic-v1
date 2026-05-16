@@ -37,10 +37,7 @@ public class BenchmarkCommand implements Runnable {
     @Override
     public void run() {
         // TODO (TASK-026): invoke sdc-bench JMH harness, write JSON report to --output.
-        System.err.println("[sdc benchmark] Not yet implemented — tracked in TASK-026.");
-        throw new picocli.CommandLine.ParameterException(
-                new picocli.CommandLine(this),
-                "benchmark subcommand not yet implemented (TASK-026)"
-        );
+        System.err.println("[sdc] Command not yet implemented. This feature will be available in a future release.");
+        System.exit(1);
     }
 }
