@@ -6,8 +6,15 @@ import java.io.IOException;
 import java.util.Objects;
 
 /**
- * Cabeçalho mínimo do container .sdc v0.
+ * Cabeçalho mínimo do container .sdc v0 (protótipo).
+ *
+ * @deprecated Use {@link SdcContainerV1} para o formato .sdc v1, que inclui
+ *             magic number {@code 0x53444301}, versão do codec, UUID do modelo AI
+ *             e headers SEG-Y preservados. Arquivos gerados com {@code SdcHeader}
+ *             (magic {@code 0x53444331}) são incompatíveis com {@link SdcContainerV1}
+ *             e serão rejeitados por {@link SdcContainerV1#read(java.io.InputStream)}.
  */
+@Deprecated(since = "1.0.0", forRemoval = false)
 public final class SdcHeader {
 
     public static final int MAGIC = 0x53444331; // 'S''D''C''1'
