@@ -1,0 +1,28 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sdc</groupId>
+    <artifactId>sdc-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>sdc-ui</artifactId>
+  <packaging>pom</packaging>
+  <name>SDC UI</name>
+  <description>Angular 18 SPA — file inspector, compression preview, waveform viewer.
+    Build: npm install and ng build --configuration=production.
+    The frontend-maven-plugin will be added in TASK-027 to integrate the npm build
+    into the Maven reactor. Until then, build sdc-ui separately via npm.
+    To skip the UI in Maven: mvn install -Dskip.ui=true</description>
+
+  <!--
+    TASK-027 will add the frontend-maven-plugin here to wire npm/ng into the
+    Maven lifecycle. This placeholder pom.xml allows the reactor to recognise
+    the sdc-ui module and resolve inter-module dependencies without requiring
+    Node.js to be present for every mvn validate / mvn compile run.
+  -->
+
+</project>
