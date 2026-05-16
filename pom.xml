@@ -1,0 +1,280 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.sdc</groupId>
+  <artifactId>sdc-parent</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>AI-Compress-Seismic-v1 - Parent</name>
+  <description>Multi-module Maven project: seismic data compression with AI (sdc-core, sdc-ai, sdc-rest, sdc-cli, sdc-bench, sdc-fixtures, sdc-ui)</description>
+
+  <properties>
+    <!-- Java -->
+    <java.version>17</java.version>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <!-- Spring Boot -->
+    <spring-boot.version>3.3.5</spring-boot.version>
+
+    <!-- Reactor -->
+    <reactor.core.version>3.6.5</reactor.core.version>
+
+    <!-- TensorFlow Java -->
+    <tensorflow.version>0.5.0</tensorflow.version>
+
+    <!-- Picocli -->
+    <picocli.version>4.7.5</picocli.version>
+
+    <!-- JMH -->
+    <jmh.version>1.37</jmh.version>
+
+    <!-- Apache Commons Compress -->
+    <commons-compress.version>1.26.1</commons-compress.version>
+
+    <!-- SpringDoc OpenAPI WebFlux -->
+    <springdoc.version>2.3.0</springdoc.version>
+
+    <!-- JUnit Jupiter -->
+    <junit-jupiter.version>5.10.2</junit-jupiter.version>
+
+    <!-- Log4j2 / SLF4J -->
+    <log4j2.version>2.23.1</log4j2.version>
+    <slf4j.version>2.0.13</slf4j.version>
+
+    <!-- Maven plugins -->
+    <maven-compiler-plugin.version>3.11.0</maven-compiler-plugin.version>
+    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <maven-assembly-plugin.version>3.6.0</maven-assembly-plugin.version>
+    <exec-maven-plugin.version>3.3.0</exec-maven-plugin.version>
+  </properties>
+
+  <modules>
+    <module>sdc-core</module>
+    <module>sdc-ai</module>
+    <module>sdc-rest</module>
+    <module>sdc-cli</module>
+    <module>sdc-bench</module>
+    <module>sdc-fixtures</module>
+    <!-- sdc-ui is an Angular 18 project built separately via Node/npm.
+         It is listed here as an optional module using the frontend-maven-plugin.
+         To skip the UI build: mvn install -pl '!sdc-ui' or use -Dskip.ui=true -->
+    <module>sdc-ui</module>
+  </modules>
+
+  <dependencyManagement>
+    <dependencies>
+
+      <!-- =====================================================
+           Spring Boot BOM — manages Spring, Reactor, Micrometer etc.
+           ===================================================== -->
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- =====================================================
+           Internal modules — canonical version pinned here
+           ===================================================== -->
+      <dependency>
+        <groupId>com.sdc</groupId>
+        <artifactId>sdc-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sdc</groupId>
+        <artifactId>sdc-ai</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sdc</groupId>
+        <artifactId>sdc-rest</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sdc</groupId>
+        <artifactId>sdc-cli</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sdc</groupId>
+        <artifactId>sdc-bench</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sdc</groupId>
+        <artifactId>sdc-fixtures</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           TensorFlow Java 0.5.0
+           ===================================================== -->
+      <dependency>
+        <groupId>org.tensorflow</groupId>
+        <artifactId>tensorflow-core-platform</artifactId>
+        <version>${tensorflow.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.tensorflow</groupId>
+        <artifactId>tensorflow-framework</artifactId>
+        <version>${tensorflow.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           Reactor Core (explicit pin — also managed by Spring BOM)
+           ===================================================== -->
+      <dependency>
+        <groupId>io.projectreactor</groupId>
+        <artifactId>reactor-core</artifactId>
+        <version>${reactor.core.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           Picocli 4.7.5
+           ===================================================== -->
+      <dependency>
+        <groupId>info.picocli</groupId>
+        <artifactId>picocli</artifactId>
+        <version>${picocli.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           JMH 1.37
+           ===================================================== -->
+      <dependency>
+        <groupId>org.openjdk.jmh</groupId>
+        <artifactId>jmh-core</artifactId>
+        <version>${jmh.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.openjdk.jmh</groupId>
+        <artifactId>jmh-generator-annprocess</artifactId>
+        <version>${jmh.version}</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <!-- =====================================================
+           Apache Commons Compress 1.26.1
+           ===================================================== -->
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-compress</artifactId>
+        <version>${commons-compress.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           SpringDoc OpenAPI WebFlux 2.3.0
+           ===================================================== -->
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+        <version>${springdoc.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           SLF4J 2.0.13
+           ===================================================== -->
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           Log4j2 SLF4J binding 2.23.1
+           ===================================================== -->
+      <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-slf4j2-impl</artifactId>
+        <version>${log4j2.version}</version>
+      </dependency>
+
+      <!-- =====================================================
+           JUnit Jupiter 5.10.2
+           ===================================================== -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${junit-jupiter.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven-compiler-plugin.version}</version>
+          <configuration>
+            <release>${java.version}</release>
+            <encoding>${project.build.sourceEncoding}</encoding>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${maven-surefire-plugin.version}</version>
+          <configuration>
+            <!-- JUnit 5 requires this provider -->
+            <useModulePath>false</useModulePath>
+          </configuration>
+        </plugin>
+
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${spring-boot.version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>${maven-assembly-plugin.version}</version>
+        </plugin>
+
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>${exec-maven-plugin.version}</version>
+        </plugin>
+
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <profiles>
+    <!-- Skip sdc-ui Angular build when Node/npm is not available or not needed -->
+    <profile>
+      <id>skip-ui</id>
+      <activation>
+        <property>
+          <name>skip.ui</name>
+          <value>true</value>
+        </property>
+      </activation>
+      <modules>
+        <module>sdc-core</module>
+        <module>sdc-ai</module>
+        <module>sdc-rest</module>
+        <module>sdc-cli</module>
+        <module>sdc-bench</module>
+        <module>sdc-fixtures</module>
+        <!-- sdc-ui excluded -->
+      </modules>
+    </profile>
+  </profiles>
+
+</project>

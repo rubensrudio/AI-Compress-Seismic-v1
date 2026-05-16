@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sdc</groupId>
+    <artifactId>sdc-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>sdc-ai</artifactId>
+  <name>SDC AI</name>
+  <description>TensorFlow Java 0.5.0 integration — autoencoder predictor (AePredictor, ModelRegistry)</description>
+
+  <dependencies>
+
+    <dependency>
+      <groupId>org.tensorflow</groupId>
+      <artifactId>tensorflow-core-platform</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.tensorflow</groupId>
+      <artifactId>tensorflow-framework</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+</project>
