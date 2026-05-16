@@ -13,21 +13,8 @@
   <name>SDC Fixtures</name>
   <description>Correctness fixtures and reference datasets — synthetic SEG-Y files + SHA-256 checksums</description>
 
-  <!--
-    No production classes. This module provides test-scope fixtures consumed by
-    sdc-core, sdc-bench and sdc-rest via test-jar dependency:
-
-      <dependency>
-        <groupId>com.sdc</groupId>
-        <artifactId>sdc-fixtures</artifactId>
-        <classifier>tests</classifier>
-        <scope>test</scope>
-      </dependency>
-
-    The test JAR is produced by the maven-jar-plugin execution below.
-    Fixtures are generated at test execution time by SegyFixtureGenerator
-    and written to src/test/resources/fixtures/ for classpath availability.
-  -->
+  <!-- No production classes. This module provides test-scope fixtures
+       consumed by sdc-core, sdc-bench and sdc-rest via test dependencies. -->
 
   <dependencies>
 
@@ -38,21 +25,6 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- SLF4J for generator logging -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- SLF4J simple binding for test output (no log4j dependency needed) -->
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-simple</artifactId>
-      <version>${slf4j.version}</version>
-      <scope>test</scope>
-    </dependency>
-
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -60,61 +32,5 @@
     </dependency>
 
   </dependencies>
-
-  <build>
-    <plugins>
-
-      <!--
-        Package test classes and test resources as a JAR with classifier=tests.
-        Other modules can declare:
-          <dependency>
-            <groupId>com.sdc</groupId>
-            <artifactId>sdc-fixtures</artifactId>
-            <classifier>tests</classifier>
-            <scope>test</scope>
-          </dependency>
-        to access fixtures on their test classpath.
-      -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>3.3.0</version>
-        <executions>
-          <execution>
-            <id>package-test-jar</id>
-            <goals>
-              <goal>test-jar</goal>
-            </goals>
-            <configuration>
-              <!-- Include only the fixtures directory from test resources -->
-              <includes>
-                <include>fixtures/**</include>
-              </includes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
-      <!-- Ensure Surefire uses JUnit 5 platform and discovers SegyFixtureGenerator -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <configuration>
-          <useModulePath>false</useModulePath>
-          <!--
-            SegyFixtureGenerator does not follow the default *Test naming convention,
-            so we must include it explicitly alongside the default patterns.
-          -->
-          <includes>
-            <include>**/*Test.java</include>
-            <include>**/*Tests.java</include>
-            <include>**/*TestCase.java</include>
-            <include>**/SegyFixtureGenerator.java</include>
-          </includes>
-        </configuration>
-      </plugin>
-
-    </plugins>
-  </build>
 
 </project>
