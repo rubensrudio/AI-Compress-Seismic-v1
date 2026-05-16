@@ -156,6 +156,7 @@
   - `sdc-core/src/test/java/com/sdc/core/SegyCompressionV1Test.java`
 - **Descrição**: Refatorar `SegyCompression` para substituir uso de `SdcFileWriter`/`SdcFileReader` por `SdcContainerV1`. Atualizar assinaturas de `compress()` e `decompress()` para aceitar `CompressionProfile` e `TracePredictor`. Garantir que o pipeline completo (encode + decode) produz arquivo byte-a-byte idêntico para format code 5 usando `TracePredictor.identity()`. Adicionar suporte à leitura de múltiplos SEG-Y logical files em sequência via `SegyIO`.
 - **Critério de verificação**: Teste de integração `SegyCompressionV1Test` executa round-trip completo em fixture sintética (format code 5) e confirma identicidade byte-a-byte; `mvn test -pl sdc-core` verde.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-007
 
 ---
 
@@ -190,6 +191,7 @@
   - `sdc-ai/src/main/resources/models/.gitkeep`
 - **Descrição**: Criar `ModelRegistry` com campos `modelUuid` (UUID), `modelPath` (Path) e `tfVersion` (String). Implementar `ModelRegistry.fromClasspath(UUID uuid)` que resolve o caminho `models/<uuid>/saved_model.pb` no classpath. Implementar `ModelRegistry.fromPath(Path dir)` para modelos em caminho externo configurável. Criar a estrutura de diretório `src/main/resources/models/` com `.gitkeep` e documentar o processo de adição de novos artefatos de modelo. O UUID do modelo bundled será definido como constante em `ModelRegistry.BUNDLED_MODEL_UUID`.
 - **Critério de verificação**: Teste unitário `ModelRegistryTest` verifica que `fromPath()` lança `ModelNotFoundException` descritiva quando o diretório não existe; `fromClasspath()` retorna o `ModelRegistry` correto quando o recurso está presente.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-009
 
 ---
 
@@ -207,6 +209,7 @@
   - `sdc-ai/src/test/java/com/sdc/ai/AePredictorTest.java`
 - **Descrição**: Criar `AePredictor` implementando `TracePredictor` (de `sdc-core`). Usar `SavedModelBundle.load(modelPath, "serve")` para carregar o modelo. Implementar `encode(float[] samples): float[]` que executa o encoder do autoencoder e retorna os resíduos; implementar `decode(float[] residuals): float[]` que executa o decoder. Carregar modelo no construtor via `ModelRegistry`; lançar exceção descritiva se o SavedModel não for encontrado. Enquanto o artefato de modelo real não estiver disponível, usar um SavedModel stub de identidade gerado em Python para desbloquear o pipeline (R-01 do plano).
 - **Critério de verificação**: `AePredictorTest` carrega o stub de identidade sem erro em ambiente limpo (sem TF instalado no SO); `encode()` seguido de `decode()` com stub retorna amostras dentro de epsilon da entrada; teste de integração passa com `mvn test -pl sdc-ai`.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-010
 
 ---
 
