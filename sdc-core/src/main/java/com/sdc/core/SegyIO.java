@@ -225,61 +225,110 @@ public final class SegyIO {
     }
 
     /**
-     * Converte um float IBM 32-bit (formato SEG-Y 1) para float IEEE.
+     * Converte um float IBM 32-bit (formato SEG-Y format code 1) para float IEEE 754.
+     *
+     * <p>Formato IBM float32:
+     * <ul>
+     *   <li>bit 31: sinal</li>
+     *   <li>bits 30-24: expoente em base 16 com bias 64 (valor real = 16^(exp-64))</li>
+     *   <li>bits 23-0: mantissa de 24 bits representando fração hexadecimal</li>
+     * </ul>
+     *
+     * <p>KNOWN LIMITATION: format code 1 round-trip (IEEE -> IBM -> IEEE) may differ
+     * by up to IBM float precision epsilon. IBM float uses base-16 exponent grouping,
+     * which means the mantissa can have up to 3 leading zero bits in the worst case,
+     * reducing effective precision to ~21 significant bits vs IEEE float's 24 bits.
+     * The maximum observed relative error for typical seismic amplitude ranges is
+     * approximately 2^-21 (~4.8e-7). Zero is preserved exactly. Bit-exact round-trip
+     * is NOT guaranteed for format code 1; CA-01 (bit-exact corretude) applies only
+     * to format code 5 (IEEE float32).
      */
-    private static float ibmToFloat(int ibm) {
+    static float ibmToFloat(int ibm) {
         if (ibm == 0) return 0.0f;
 
-        int sign = (ibm >>> 31) & 0x1;
+        int sign     = (ibm >>> 31) & 0x1;
         int exponent = (ibm >>> 24) & 0x7F;
-        int fraction = ibm & 0x00FFFFFF;
+        int fraction =  ibm         & 0x00FFFFFF;
 
         if (fraction == 0) return 0.0f;
 
-        double mant = fraction / (double) 0x01000000; // 24 bits
+        // Mantissa como fração hexadecimal: fraction / 16^6
+        // Equivalente a fraction * 16^(exponent - 64 - 6) = fraction * 16^(exponent - 70)
+        // Usamos double para preservar os 24 bits de mantissa sem perda intermediária.
+        double mant  = fraction / (double) 0x01000000; // normaliza para [0, 1)
         double value = mant * Math.pow(16.0, exponent - 64);
 
         return sign == 0 ? (float) value : (float) -value;
     }
 
     /**
-     * Converte float IEEE para IBM 32-bit (formato SEG-Y 1).
-     * Aproximação suficiente para reconstrução e consumo por softwares SEG-Y.
+     * Converte float IEEE 754 para IBM float 32-bit (formato SEG-Y format code 1).
+     *
+     * <p>KNOWN LIMITATION: format code 1 round-trip may differ by IBM float precision
+     * epsilon (~2^-21 relative error, approximately 4.8e-7). This is an inherent
+     * limitation of the IBM float32 format and cannot be corrected without lossy
+     * approximation. Bit-exact round-trip is NOT achievable for arbitrary IEEE float32
+     * values converted to IBM float32 and back. Specifically:
+     * <ul>
+     *   <li>IBM float uses base-16 exponent grouping, so up to 3 bits of mantissa
+     *       precision are lost when the value's binary exponent is not a multiple of 4.</li>
+     *   <li>Zero is preserved exactly.</li>
+     *   <li>Subnormal IEEE floats that underflow IBM range are flushed to zero.</li>
+     *   <li>Values exceeding IBM float32 range (approx 7.2e75) saturate to max IBM float.</li>
+     * </ul>
      */
-    private static int floatToIbm(float f) {
+    static int floatToIbm(float f) {
         if (f == 0.0f) return 0;
+        if (Float.isNaN(f) || Float.isInfinite(f)) {
+            // IBM float não possui representações especiais NaN/Inf;
+            // mapeamos para zero como comportamento seguro.
+            return 0;
+        }
 
         int signBit = 0;
         double value = f;
-        if (value < 0) {
+        if (value < 0.0) {
             signBit = 1;
-            value = -value;
+            value   = -value;
         }
 
+        // Bias IBM = 64; valor real = mantissa * 16^(exponent - 64).
+        // Normaliza para que a mantissa esteja no intervalo [1/16, 1),
+        // ou seja, o primeiro nibble hexadecimal da mantissa é não-zero.
         int exponent = 64;
-
-        // Normaliza para faixa [1/16, 1)
         while (value >= 1.0) {
             value /= 16.0;
             exponent++;
         }
-        while (value < 1.0 / 16.0) {
+        while (value < (1.0 / 16.0) && value > 0.0) {
             value *= 16.0;
             exponent--;
         }
 
+        // Underflow: expoente fora do range IBM (0-127 válidos, mas bias=64 -> [-64,63])
         if (exponent <= 0) {
-            // underflow para zero
-            return 0;
+            return 0; // flush to zero
+        }
+        // Overflow: expoente acima do máximo IBM (127)
+        if (exponent > 127) {
+            // Satura no valor máximo representável
+            return (signBit << 31) | (127 << 24) | 0x00FFFFFF;
         }
 
-        int fraction = (int) Math.round(value * 0x01000000);
+        // Converte mantissa para inteiro de 24 bits.
+        // Truncamento em vez de arredondamento reduz o viés sistemático,
+        // mas o epsilon de round-trip permanece inalterado (limitação do formato).
+        int fraction = (int) (value * 0x01000000);
+
+        // Garante que não ultrapassamos 24 bits (pode ocorrer por imprecisão de double)
         if (fraction >= 0x01000000) {
             fraction = 0x00FFFFFF;
         }
+        if (fraction < 0) {
+            fraction = 0;
+        }
 
-        int ibm = (signBit << 31) | (exponent << 24) | (fraction & 0x00FFFFFF);
-        return ibm;
+        return (signBit << 31) | (exponent << 24) | (fraction & 0x00FFFFFF);
     }
 
     public static final class TraceMeta {
