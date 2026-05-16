@@ -15,6 +15,12 @@
 
   <dependencies>
 
+    <!-- sdc-core: provides TracePredictor interface implemented by AePredictor -->
+    <dependency>
+      <groupId>com.sdc</groupId>
+      <artifactId>sdc-core</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.tensorflow</groupId>
       <artifactId>tensorflow-core-platform</artifactId>
