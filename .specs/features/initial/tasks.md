@@ -84,6 +84,7 @@
   - `sdc-core/src/main/java/com/sdc/core/TraceBlockCodec.java`
 - **Descrição**: Criar a interface `TracePredictor` com métodos `encode(float[] samples): float[]` e `decode(float[] residuals): float[]` mais factory method estático `TracePredictor.identity()` (retorna as amostras sem alteração). Modificar `TraceBlockCodec` para receber `TracePredictor` via construtor (injeção de dependência) e chamar `predictor.encode()` entre o delta encoding e a quantização no estágio de resíduos AI. Anotar `TraceBlockCodec` com `@NotThreadSafe`. Retrocompatibilidade garantida pelo uso de `identity()` como default.
 - **Critério de verificação**: Testes existentes de `TraceBlockCodecTest` continuam verdes com `identity()`; novo teste unitário confirma que o predictor é chamado no slot correto do pipeline.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-003
 
 ---
 
@@ -101,6 +102,7 @@
   - `sdc-core/src/main/java/com/sdc/core/SdcHeader.java`
 - **Descrição**: Criar `SdcContainerV1` com os campos do plano: `magic` (4B = `0x53444301`), `codec_version` (2B), `model_uuid_msb/lsb` (8B cada), `segy_textual_header` (3200B), `segy_binary_header` (400B), `trace_count` (4B), `samples_per_trace` (4B), `sample_format_code` (4B), `trace_headers_blob` (240×N bytes), `compressed_blocks`. Implementar `write(OutputStream)` e `read(InputStream)` com validação de magic e versão. Arquivos `.sdc` do protótipo (sem UUID) devem ser detectados e rejeitados com exceção descritiva. `SdcHeader` existente pode ser marcado como `@Deprecated` apontando para `SdcContainerV1`.
 - **Critério de verificação**: Teste unitário escreve e relê um `SdcContainerV1` sintético; magic e UUID são preservados byte-a-byte; leitura de arquivo `.sdc` do protótipo lança `IllegalArgumentException` com mensagem indicando incompatibilidade.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-004
 
 ---
 
@@ -118,6 +120,7 @@
   - `sdc-core/src/test/java/com/sdc/core/SegyValidatorTest.java`
 - **Descrição**: Criar `SegyValidator` que verifica: (a) comprimento mínimo do arquivo (≥ 3600 bytes para EBCDIC + header binário); (b) presença do prefixo EBCDIC esperado (primeiros 3200 bytes); (c) `samplesPerTrace > 0` no header binário; (d) `formatCode` suportado (1 ou 5); (e) integridade estrutural de todos os traços até EOF, calculando o offset esperado de cada traço. Em caso de falha, lança `SegyValidationException` com byte offset do primeiro problema detectado. Testes com arquivos sintéticos válidos e com corrupção injetada em diferentes posições.
 - **Critério de verificação**: Testes unitários passam para fixtures válidas (exit 0) e para arquivos com corrupção injetada em header EBCDIC, header binário e meio de arquivo (exceção com offset correto).
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-005
 
 ---
 
@@ -135,6 +138,7 @@
   - `sdc-core/src/test/java/com/sdc/core/SegyIOFormatCode1Test.java`
 - **Descrição**: Investigar a conversão dupla IEEE↔IBM float32 em `SegyIO` para format code 1. Se a correção exata for viável (precisão de representação IBM float32 ≥ IEEE float32 para todos os ranges), corrigir. Se inviável, documentar explicitamente no código com um comentário `// KNOWN LIMITATION: format code 1 round-trip may differ by IEEE754 rounding epsilon` e excluir format code 1 da asserção de corretude bit-a-bit, restringindo CA-01 a format code 5. Criar teste de regressão que documenta o comportamento atual e falha se o comportamento piorar.
 - **Critério de verificação**: Teste de regressão para format code 1 passa; comportamento documentado no teste; `SdcRoundTripTest` para format code 5 continua 100% verde.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-006
 
 ---
 
