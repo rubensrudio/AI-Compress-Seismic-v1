@@ -66,7 +66,7 @@
         <dependency>
           <groupId>org.tensorflow</groupId>
           <artifactId>tensorflow-core-api</artifactId>
-          <version>0.5.0</version>
+          <version>${tensorflow.version}</version>
           <classifier>linux-x86_64</classifier>
         </dependency>
       </dependencies>
@@ -85,7 +85,7 @@
         <dependency>
           <groupId>org.tensorflow</groupId>
           <artifactId>tensorflow-core-api</artifactId>
-          <version>0.5.0</version>
+          <version>${tensorflow.version}</version>
           <classifier>windows-x86_64</classifier>
         </dependency>
       </dependencies>
@@ -106,7 +106,7 @@
         <dependency>
           <groupId>org.tensorflow</groupId>
           <artifactId>tensorflow-core-api</artifactId>
-          <version>0.5.0</version>
+          <version>${tensorflow.version}</version>
           <classifier>macosx-x86_64</classifier>
         </dependency>
       </dependencies>
