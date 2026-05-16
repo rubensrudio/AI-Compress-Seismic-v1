@@ -136,11 +136,24 @@ public final class SdcContainerV1 {
             throw new IllegalArgumentException("sampleFormatCode must be > 0, got " + sampleFormatCode);
         }
 
-        int expectedBlobSize = TRACE_HEADER_BYTES * traceCount;
+        // DT-2: guard overflow para traceCount >= 8_948_770 (240 * 8_948_770 > Integer.MAX_VALUE)
+        long blobSizeLong = (long) TRACE_HEADER_BYTES * traceCount;
+        if (blobSizeLong > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "trace_headers_blob exceeds 2 GB for traceCount=" + traceCount);
+        }
+        int expectedBlobSize = (int) blobSizeLong;
         if (traceHeadersBlob.length != expectedBlobSize) {
             throw new IllegalArgumentException(
                     "traceHeadersBlob must be " + expectedBlobSize +
                     " bytes (240 × " + traceCount + "), got " + traceHeadersBlob.length);
+        }
+
+        // DT-3: validar consistência entre traceCount e compressedBlocks.size()
+        if (compressedBlocks.size() != traceCount) {
+            throw new IllegalArgumentException(
+                    "compressedBlocks.size()=" + compressedBlocks.size() +
+                    " != traceCount=" + traceCount + ". Container would be corrupt.");
         }
 
         this.codecVersion = codecVersion;
