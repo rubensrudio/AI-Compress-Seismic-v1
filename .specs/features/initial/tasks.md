@@ -397,6 +397,7 @@
   - `sdc-cli/src/main/java/com/sdc/cli/Main.java`
 - **Descrição**: Criar módulo `sdc-cli` portando `Main.java` e `pom.xml` do protótipo. Refatorar `Main` de flags flat para estrutura Picocli com `@Command(name = "sdc", subcommands = {CompressCommand.class, DecompressCommand.class, ValidateCommand.class, BenchmarkCommand.class, InspectCommand.class})`. Configurar empacotamento como uber-JAR via `maven-shade-plugin` ou `spring-boot-maven-plugin`. Declarar dependências de `sdc-core` e `sdc-ai`.
 - **Critério de verificação**: `java -jar sdc-cli.jar --help` exibe os 5 subcomandos; `mvn package -pl sdc-cli` produz o uber-JAR sem erro.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-021
 
 ---
 
