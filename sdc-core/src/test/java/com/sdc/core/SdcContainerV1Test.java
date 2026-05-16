@@ -229,4 +229,84 @@ class SdcContainerV1Test {
         assertEquals(0x53444301, SdcContainerV1.MAGIC,
                 "MAGIC constant must equal 0x53444301");
     }
+
+    // -----------------------------------------------------------------------
+    // Teste 7 (M-01): blobSize overflow — traceCount >= 8_948_770 lança IOException
+    // 240 * 8_948_770 = 2_147_704_800 > Integer.MAX_VALUE (2_147_483_647)
+    // -----------------------------------------------------------------------
+
+    @Test
+    void readWithOversizedTraceCountThrowsIOException() throws Exception {
+        // Monta um stream sintético com magic válido, codecVersion=1, UUID e
+        // traceCount = 8_948_770 para forçar overflow em blobSize (240 * 8_948_770 > MAX_INT)
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream dos = new java.io.DataOutputStream(baos);
+
+        // magic
+        dos.writeInt(SdcContainerV1.MAGIC);
+        // codec_version = 1
+        dos.writeShort((short) 1);
+        // model UUID MSB + LSB
+        dos.writeLong(0L);
+        dos.writeLong(0L);
+        // segy_textual_header: 3200 bytes
+        dos.write(new byte[3200]);
+        // segy_binary_header: 400 bytes
+        dos.write(new byte[400]);
+        // trace_count = 8_948_770 (causa overflow: 240 * 8_948_770 = 2_147_704_800 > MAX_INT)
+        dos.writeInt(8_948_770);
+        // samples_per_trace = 1
+        dos.writeInt(1);
+        // sample_format_code = 5
+        dos.writeInt(5);
+        // (não escrevemos o blob — a IOException deve ser lançada antes da leitura)
+        dos.flush();
+
+        InputStream is = new ByteArrayInputStream(baos.toByteArray());
+
+        java.io.IOException ex = assertThrows(
+                java.io.IOException.class,
+                () -> SdcContainerV1.read(is),
+                "traceCount >= 8_948_770 must throw IOException due to blobSize overflow"
+        );
+
+        String msg = ex.getMessage();
+        assertNotNull(msg, "Exception message must not be null");
+        assertTrue(msg.contains("2 GB") || msg.contains("corrupt") || msg.contains("traceCount"),
+                "Exception message must describe the overflow condition. Got: " + msg);
+    }
+
+    // -----------------------------------------------------------------------
+    // Teste 8 (M-02): codecVersion != 1 lança IllegalArgumentException com
+    //                 mensagem descritiva
+    // -----------------------------------------------------------------------
+
+    @Test
+    void readUnsupportedCodecVersionThrowsIllegalArgumentException() throws Exception {
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        java.io.DataOutputStream dos = new java.io.DataOutputStream(baos);
+
+        // magic válido
+        dos.writeInt(SdcContainerV1.MAGIC);
+        // codec_version = 2 (versão futura não suportada)
+        dos.writeShort((short) 2);
+        dos.flush();
+
+        InputStream is = new ByteArrayInputStream(baos.toByteArray());
+
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> SdcContainerV1.read(is),
+                "codecVersion != 1 must throw IllegalArgumentException"
+        );
+
+        String msg = ex.getMessage();
+        assertNotNull(msg, "Exception message must not be null");
+        assertTrue(
+                msg.contains("2") && (msg.toLowerCase().contains("version") ||
+                        msg.toLowerCase().contains("unsupported") ||
+                        msg.toLowerCase().contains("upgrade")),
+                "Exception message must mention the unsupported version. Got: " + msg
+        );
+    }
 }

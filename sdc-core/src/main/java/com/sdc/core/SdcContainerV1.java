@@ -261,6 +261,12 @@ public final class SdcContainerV1 {
 
         // codec_version (2 bytes)
         short codecVersion = dis.readShort();
+        if (codecVersion != 1) {
+            throw new IllegalArgumentException(
+                "Unsupported SdcContainerV1 codec version: " + codecVersion +
+                ". This implementation supports only version 1. " +
+                "Please upgrade the sdc-core library.");
+        }
 
         // model_uuid_msb + model_uuid_lsb (8 + 8 bytes)
         long uuidMsb = dis.readLong();
@@ -291,7 +297,12 @@ public final class SdcContainerV1 {
         int sampleFormatCode = dis.readInt();
 
         // trace_headers_blob (240 × traceCount bytes)
-        int blobSize = TRACE_HEADER_BYTES * traceCount;
+        long blobSizeLong = (long) TRACE_HEADER_BYTES * traceCount;
+        if (blobSizeLong > Integer.MAX_VALUE) {
+            throw new IOException("trace_headers_blob size exceeds 2 GB: " + blobSizeLong +
+                " bytes for traceCount=" + traceCount + ". File may be corrupt.");
+        }
+        int blobSize = (int) blobSizeLong;
         byte[] traceHeadersBlob = dis.readNBytes(blobSize);
         if (traceHeadersBlob.length != blobSize) {
             throw new IOException("Truncated trace_headers_blob: expected " +
