@@ -71,22 +71,34 @@ public class TraceBlockCodecTest {
 
     /**
      * Verifica que encode() e decode() do predictor são invocados
-     * exatamente uma vez durante compress e decompress, respectivamente.
+     * exatamente uma vez durante compress e decompress, respectivamente,
+     * e que encode() recebe DELTAS normalizados — não as amostras brutas originais.
      *
      * Este é o critério de verificação central da TASK-003:
      * "confirmar que o predictor é chamado no slot correto do pipeline".
+     *
+     * <p>Com samples = {1, 2, 3, 4, 5, 6, 7, 8}, a normalização para [-1, 1]
+     * transforma min=1 para -1.0f e max=8 para +1.0f. O primeiro sample
+     * normalizado é -1.0f (não 1.0f bruto). O primeiro delta é calculado
+     * sobre as amostras normalizadas resultando em -1.0f — definitivamente
+     * diferente de 1.0f (primeiro sample bruto). Isso confirma que encode()
+     * recebe a saída do delta encoding sobre amostras normalizadas, não as
+     * amostras brutas originais.
      */
     @Test
     void predictorIsInvokedInCorrectPipelineSlot() {
         AtomicInteger encodeCalls = new AtomicInteger(0);
         AtomicInteger decodeCalls = new AtomicInteger(0);
 
-        // Spy: registra invocações e delega para identity
+        // Array de captura: posição [0] conterá o array passado para encode()
+        float[][] capturedEncode = new float[1][];
+
+        // Spy: registra invocações, captura o array de entrada e delega para identity
         TracePredictor spy = new TracePredictor() {
             @Override
             public float[] encode(float[] deltas) {
                 encodeCalls.incrementAndGet();
-                // Verifica que recebe os deltas (não as amostras brutas nem os residuals já quantizados)
+                capturedEncode[0] = deltas.clone(); // captura para asserção posterior
                 assertNotNull(deltas, "encode() recebeu null");
                 assertTrue(deltas.length > 0, "encode() recebeu array vazio");
                 return TracePredictor.identity().encode(deltas);
@@ -110,6 +122,17 @@ public class TraceBlockCodecTest {
                 "predictor.encode() deve ser invocado exatamente 1x durante compress");
         assertEquals(0, decodeCalls.get(),
                 "predictor.decode() não deve ser invocado durante compress");
+
+        // Verificar que o array capturado NÃO é as amostras brutas originais.
+        // A normalização transforma min=1 para -1.0f e max=8 para +1.0f.
+        // O primeiro sample normalizado é -1.0f (não 1.0f bruto).
+        // O primeiro delta é -1.0f — definitivamente diferente de 1.0f (primeiro sample bruto).
+        assertNotNull(capturedEncode[0],
+                "encode() não foi chamado ou capturedEncode não foi preenchido");
+        assertNotEquals(samples[0], capturedEncode[0][0], 1e-6f,
+                "encode() deve receber deltas, não amostras brutas: "
+                + "primeiro delta (" + capturedEncode[0][0] + ") não deve ser "
+                + "igual ao primeiro sample bruto (" + samples[0] + ")");
 
         // Decode: predictor.decode() deve ser chamado exatamente 1 vez
         TraceBlock rec = TraceBlockCodec.decompress(cb, spy);
