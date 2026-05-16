@@ -38,4 +38,80 @@
 
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+
+    <!-- linux-x86_64: MANDATORY — CI runs on Linux amd64 -->
+    <profile>
+      <id>tf-native-linux-x86_64</id>
+      <activation>
+        <os>
+          <name>Linux</name>
+          <arch>amd64</arch>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.tensorflow</groupId>
+          <artifactId>tensorflow-core-api</artifactId>
+          <version>0.5.0</version>
+          <classifier>linux-x86_64</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <!-- windows-x86_64: BEST-EFFORT — developer machines -->
+    <profile>
+      <id>tf-native-windows-x86_64</id>
+      <activation>
+        <os>
+          <family>windows</family>
+          <arch>amd64</arch>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.tensorflow</groupId>
+          <artifactId>tensorflow-core-api</artifactId>
+          <version>0.5.0</version>
+          <classifier>windows-x86_64</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <!-- macosx-x86_64: BEST-EFFORT — Intel Mac developer machines.
+         Apple Silicon (arm64) is not supported by TF Java 0.5.0 natively;
+         use Rosetta 2 or a later TF Java release. -->
+    <profile>
+      <id>tf-native-macosx-x86_64</id>
+      <activation>
+        <os>
+          <name>Mac OS X</name>
+          <arch>x86_64</arch>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.tensorflow</groupId>
+          <artifactId>tensorflow-core-api</artifactId>
+          <version>0.5.0</version>
+          <classifier>macosx-x86_64</classifier>
+        </dependency>
+      </dependencies>
+    </profile>
+
+  </profiles>
+
 </project>
