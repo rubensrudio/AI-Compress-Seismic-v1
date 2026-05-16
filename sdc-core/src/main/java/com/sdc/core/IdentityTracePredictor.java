@@ -1,6 +1,7 @@
 package com.sdc.core;
 
 import java.util.Arrays;
+import java.util.Objects;
 
 /**
  * Implementação de identidade de {@link TracePredictor}.
@@ -18,11 +19,13 @@ final class IdentityTracePredictor implements TracePredictor {
 
     @Override
     public float[] encode(float[] deltas) {
+        Objects.requireNonNull(deltas, "deltas must not be null");
         return Arrays.copyOf(deltas, deltas.length);
     }
 
     @Override
     public float[] decode(float[] residuals) {
+        Objects.requireNonNull(residuals, "residuals must not be null");
         return Arrays.copyOf(residuals, residuals.length);
     }
 }
