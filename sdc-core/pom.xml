@@ -15,20 +15,20 @@
 
   <dependencies>
 
-    <dependency>
-      <groupId>io.projectreactor</groupId>
-      <artifactId>reactor-core</artifactId>
-    </dependency>
+    <!-- DA-02: sdc-core é domínio puro — sem dependências de frameworks reativos.
+         reactor-core foi removido (OBS-1). -->
 
     <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
     </dependency>
 
+    <!-- OBS-2: substituído log4j-slf4j2-impl (que causava duplo binding SLF4J
+         quando sdc-rest importava sdc-core) por slf4j-api em compile-scope.
+         A implementação de logging fica nos módulos consumidores. -->
     <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j2-impl</artifactId>
-      <scope>runtime</scope>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
 
     <dependency>
