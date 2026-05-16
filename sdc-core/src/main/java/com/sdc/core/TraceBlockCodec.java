@@ -6,27 +6,148 @@ import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
 /**
- * Codec de bloco:
+ * Codec de bloco de traços sísmicos.
  *
- * Encode:
- *  1) min/max
- *  2) normaliza para [-1,1]
- *  3) delta encode
- *  4) quantiza para short
- *  5) converte short[] -> byte[]
- *  6) aplica Deflater (zlib) nos bytes
+ * <h3>Pipeline de encode</h3>
+ * <ol>
+ *   <li>Calcula min/max do traço</li>
+ *   <li>Normaliza para [-1, 1]</li>
+ *   <li>Delta encoding (correlação temporal)</li>
+ *   <li><b>TracePredictor.encode()</b> — slot de resíduos AI (identity por padrão)</li>
+ *   <li>Quantização linear para {@code short[]}</li>
+ *   <li>Conversão {@code short[] -> byte[]}</li>
+ *   <li>DEFLATE</li>
+ * </ol>
  *
- * Decode faz o inverso.
+ * <h3>Pipeline de decode</h3>
+ * <ol>
+ *   <li>Inflate</li>
+ *   <li>Conversão {@code byte[] -> short[]}</li>
+ *   <li>Dequantização linear</li>
+ *   <li><b>TracePredictor.decode()</b> — inverso do slot AI</li>
+ *   <li>Delta decode</li>
+ *   <li>Denormalização</li>
+ * </ol>
+ *
+ * <p><b>Thread-safety:</b> esta classe não é thread-safe. Cada thread deve
+ * usar sua própria instância — ou usar os métodos estáticos que constroem
+ * o codec interno com {@link TracePredictor#identity()}.
+ *
+ * @NotThreadSafe — race condition documentada (R-08 do plano técnico);
+ *   paralelização adiada para v2.
  */
 public final class TraceBlockCodec {
 
-    private TraceBlockCodec() {}
+    private final TracePredictor predictor;
 
+    /**
+     * Constrói um codec com o {@link TracePredictor} fornecido.
+     *
+     * @param predictor implementação de predição a ser aplicada no slot de
+     *                  resíduos AI do pipeline; nunca {@code null}
+     */
+    public TraceBlockCodec(TracePredictor predictor) {
+        if (predictor == null) {
+            throw new IllegalArgumentException("predictor must not be null");
+        }
+        this.predictor = predictor;
+    }
+
+    /**
+     * Constrói um codec com {@link TracePredictor#identity()} — modo sem IA.
+     * Mantém retrocompatibilidade com código existente.
+     */
+    public TraceBlockCodec() {
+        this(TracePredictor.identity());
+    }
+
+    // -----------------------------------------------------------------------
+    // Métodos de instância (portam o predictor configurado)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Comprime um bloco de traço usando o profile padrão de alta qualidade
+     * e o predictor configurado nesta instância.
+     */
+    public CompressedTraceBlock compressBlock(TraceBlock tb) {
+        return compressBlock(tb, CompressionProfile.defaultHighQuality());
+    }
+
+    /**
+     * Comprime um bloco de traço usando o profile e o predictor configurados
+     * nesta instância.
+     */
+    public CompressedTraceBlock compressBlock(TraceBlock tb, CompressionProfile profile) {
+        return compressInternal(tb, profile, predictor);
+    }
+
+    /**
+     * Descomprime um bloco usando o predictor configurado nesta instância.
+     */
+    public TraceBlock decompressBlock(CompressedTraceBlock cb) {
+        return decompressInternal(cb, predictor);
+    }
+
+    // -----------------------------------------------------------------------
+    // Métodos estáticos — retrocompatibilidade total com API original
+    // -----------------------------------------------------------------------
+
+    /**
+     * Comprime usando profile padrão e {@link TracePredictor#identity()}.
+     * Mantém a assinatura original sem {@code TracePredictor}.
+     */
     public static CompressedTraceBlock compress(TraceBlock tb) {
         return compress(tb, CompressionProfile.defaultHighQuality());
     }
 
+    /**
+     * Comprime usando o profile fornecido e {@link TracePredictor#identity()}.
+     * Mantém a assinatura original sem {@code TracePredictor}.
+     */
     public static CompressedTraceBlock compress(TraceBlock tb, CompressionProfile profile) {
+        return compressInternal(tb, profile, TracePredictor.identity());
+    }
+
+    /**
+     * Comprime usando profile padrão e o predictor fornecido.
+     * Overload que adiciona suporte ao predictor sem quebrar assinaturas originais.
+     */
+    public static CompressedTraceBlock compress(TraceBlock tb, TracePredictor predictor) {
+        return compressInternal(tb, CompressionProfile.defaultHighQuality(), predictor);
+    }
+
+    /**
+     * Comprime usando o profile e o predictor fornecidos.
+     * Overload completo para controle total do pipeline.
+     */
+    public static CompressedTraceBlock compress(TraceBlock tb, CompressionProfile profile,
+                                                TracePredictor predictor) {
+        return compressInternal(tb, profile, predictor);
+    }
+
+    /**
+     * Descomprime usando {@link TracePredictor#identity()}.
+     * Mantém a assinatura original sem {@code TracePredictor}.
+     */
+    public static TraceBlock decompress(CompressedTraceBlock cb) {
+        return decompressInternal(cb, TracePredictor.identity());
+    }
+
+    /**
+     * Descomprime usando o predictor fornecido.
+     * Overload que adiciona suporte ao predictor sem quebrar assinaturas originais.
+     */
+    public static TraceBlock decompress(CompressedTraceBlock cb, TracePredictor predictor) {
+        return decompressInternal(cb, predictor);
+    }
+
+    // -----------------------------------------------------------------------
+    // Lógica central do pipeline (private)
+    // -----------------------------------------------------------------------
+
+    private static CompressedTraceBlock compressInternal(TraceBlock tb,
+                                                         CompressionProfile profile,
+                                                         TracePredictor predictor) {
         float[] samples = tb.samples();
         int n = samples.length;
 
@@ -35,44 +156,53 @@ public final class TraceBlockCodec {
         float min = mm[0];
         float max = mm[1];
 
-        // 2) normalização
+        // 2) normalização para [-1, 1]
         float[] norm = Preprocessing.normalizeToMinusOneToOne(samples);
 
-        // 3) delta
+        // 3) delta encoding
         float[] deltas = Preprocessing.deltaEncode(norm);
 
-        // 4) quantização, agora respeitando effectiveBits do profile
-        short[] q = LinearQuantizer.encode(deltas, profile);
+        // 4) slot de resíduos AI — predictor.encode() entre delta e quantização
+        float[] residuals = predictor.encode(deltas);
 
-        // 5) short[] -> byte[]
+        // 5) quantização linear (respeitando effectiveBits do profile)
+        short[] q = LinearQuantizer.encode(residuals, profile);
+
+        // 6) short[] -> byte[]
         byte[] rawBytes = shortsToBytes(q);
 
-        // 6) Deflater com nível vindo do profile
+        // 7) DEFLATE com nível do profile
         byte[] compressed = deflate(rawBytes, profile.deflaterLevel());
 
         return new CompressedTraceBlock(tb.traceId(), min, max, n, compressed);
     }
 
-    public static TraceBlock decompress(CompressedTraceBlock cb) {
-        // 1) inflar bytes
+    private static TraceBlock decompressInternal(CompressedTraceBlock cb,
+                                                 TracePredictor predictor) {
+        // 1) inflate
         byte[] rawBytes = inflate(cb.payload());
 
-        // 2) bytes -> short[]
+        // 2) byte[] -> short[]
         short[] q = bytesToShorts(rawBytes, cb.samplesPerTrace());
 
-        // 3) dequantizar
-        float[] deltasNorm = LinearQuantizer.decode(q);
+        // 3) dequantização linear
+        float[] dequantized = LinearQuantizer.decode(q);
 
-        // 4) delta decode
-        float[] norm = Preprocessing.deltaDecode(deltasNorm);
+        // 4) slot de resíduos AI — predictor.decode() na posição simétrica
+        float[] deltas = predictor.decode(dequantized);
 
-        // 5) denormalizar usando min/max
+        // 5) delta decode
+        float[] norm = Preprocessing.deltaDecode(deltas);
+
+        // 6) denormalização usando min/max preservados
         float[] samples = Preprocessing.denormalizeFromMinusOneToOne(norm, cb.min(), cb.max());
 
         return new TraceBlock(cb.traceId(), samples);
     }
 
-    // ---------- Helpers ----------
+    // -----------------------------------------------------------------------
+    // Helpers de serialização e compressão
+    // -----------------------------------------------------------------------
 
     static byte[] shortsToBytes(short[] data) {
         byte[] out = new byte[data.length * 2];
@@ -90,7 +220,6 @@ public final class TraceBlockCodec {
         }
         int n = data.length / 2;
         if (expectedSamples > 0 && n != expectedSamples) {
-            // em produção, talvez só logar; aqui vamos ser estritos
             throw new IllegalStateException("expected " + expectedSamples + " samples but got " + n);
         }
         short[] out = new short[n];
@@ -126,7 +255,6 @@ public final class TraceBlockCodec {
         }
     }
 
-
     static byte[] inflate(byte[] input) {
         Inflater inflater = new Inflater();
         inflater.setInput(input);
@@ -137,7 +265,6 @@ public final class TraceBlockCodec {
                 int count = inflater.inflate(buffer);
                 if (count == 0) {
                     if (inflater.needsInput()) break;
-                    // evita loop infinito em caso de dados corrompidos
                 }
                 baos.write(buffer, 0, count);
             }
@@ -148,6 +275,4 @@ public final class TraceBlockCodec {
             inflater.end();
         }
     }
-
-
 }
