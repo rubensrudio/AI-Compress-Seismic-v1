@@ -1,0 +1,42 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.sdc</groupId>
+    <artifactId>sdc-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>sdc-core</artifactId>
+  <name>SDC Core</name>
+  <description>SEG-Y Rev1 parser/writer, codec pipeline, domain structures</description>
+
+  <dependencies>
+
+    <!-- DA-02: sdc-core é domínio puro — sem dependências de frameworks reativos.
+         reactor-core foi removido (OBS-1). -->
+
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-compress</artifactId>
+    </dependency>
+
+    <!-- OBS-2: substituído log4j-slf4j2-impl (que causava duplo binding SLF4J
+         quando sdc-rest importava sdc-core) por slf4j-api em compile-scope.
+         A implementação de logging fica nos módulos consumidores. -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+  </dependencies>
+
+</project>
