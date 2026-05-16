@@ -81,6 +81,13 @@ public class InspectCommand implements Callable<Integer> {
      * <p>Sample interval is read from binary header bytes 16-17 as a big-endian
      * unsigned short (microseconds per SEG-Y Rev1 spec) and converted to milliseconds.
      * A value of zero means the field is absent in the header and is not printed.
+     *
+     * <p>Omissoes intencionais de escopo: inline/xline range e data de aquisicao
+     * nao sao exibidos porque a convencao de header de traco (byte offsets dos campos
+     * de linha inline/crossline e timestamp de aquisicao) nao esta definida no projeto
+     * para esta versao; esses campos serao adicionados em implementacao futura (v2).
+     * // inline/xline range e data de aquisicao omitidos: convencao de header de traco
+     * // nao definida no projeto; deixados para implementacao futura (v2).
      */
     private void printTable(Path filePath, SegyDataset dataset, long fileSizeBytes) {
         int sampleIntervalMicros = readUnsignedShortBE(
