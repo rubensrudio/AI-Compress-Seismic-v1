@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -23,7 +22,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -37,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <ul>
  *   <li>{@code minimal.segy} — 1 trace, format code 5 (IEEE float32), 100 samples/trace</li>
  *   <li>{@code medium.segy} — 100 traces, format code 5, 500 samples/trace</li>
- *   <li>{@code multi_logical.segy} — two concatenated SEG-Y logical files (100 + 50 traces)</li>
+ *   <li>{@code large.segy} — 200 traces, format code 5, 500 samples/trace</li>
  *   <li>{@code corrupt_ebcdic.segy} — minimal fixture with bytes 0x01–0x08 injected into EBCDIC header</li>
  *   <li>{@code corrupt_binary.segy} — minimal fixture with samplesPerTrace = 0 in binary header</li>
  *   <li>{@code corrupt_mid_file.segy} — medium fixture truncated mid-trace (last trace cut in half)</li>
@@ -104,14 +102,14 @@ public class SegyFixtureGenerator {
         validFixtures.add(new FixtureEntry("medium.segy", mediumPath));
         LOG.info("Written medium.segy ({} bytes)", medium.length);
 
-        // --- (c) Multiple logical files: two concatenated SEG-Y files ---
-        byte[] multiLogical = buildMultiLogicalSegyFile();
-        Path multiPath = write(fixturesDir, "multi_logical.segy", multiLogical);
-        validFixtures.add(new FixtureEntry("multi_logical.segy", multiPath));
-        LOG.info("Written multi_logical.segy ({} bytes)", multiLogical.length);
+        // --- (c) Large: 200 traces, format code 5, 500 samples/trace ---
+        byte[] large = buildSegyFile(500, FORMAT_CODE_IEEE_FLOAT32, 200, "large");
+        Path largePath = write(fixturesDir, "large.segy", large);
+        validFixtures.add(new FixtureEntry("large.segy", largePath));
+        LOG.info("Written large.segy ({} bytes)", large.length);
 
         // --- (d) Corrupted fixtures ---
-        writeCorrectedFixtures(fixturesDir, minimal, medium);
+        writeCorruptedFixtures(fixturesDir, minimal, medium);
 
         // --- Generate and write checksums ---
         Path checksumsPath = writeChecksums(fixturesDir, validFixtures);
@@ -191,12 +189,8 @@ public class SegyFixtureGenerator {
             byte[] medium  = buildSegyFile(500, FORMAT_CODE_IEEE_FLOAT32, 100, "medium");
             write(fixturesDir, "minimal.segy", minimal);
             write(fixturesDir, "medium.segy", medium);
-            writeCorrectedFixtures(fixturesDir, minimal, medium);
+            writeCorruptedFixtures(fixturesDir, minimal, medium);
         }
-
-        assertNotNull(fixturesDir.resolve("corrupt_ebcdic.segy"));
-        assertNotNull(fixturesDir.resolve("corrupt_binary.segy"));
-        assertNotNull(fixturesDir.resolve("corrupt_mid_file.segy"));
 
         assertTrue(Files.exists(fixturesDir.resolve("corrupt_ebcdic.segy")),
             "corrupt_ebcdic.segy must exist");
@@ -247,22 +241,6 @@ public class SegyFixtureGenerator {
         return baos.toByteArray();
     }
 
-    /**
-     * Builds a multi-logical-file SEG-Y: two complete SEG-Y files concatenated.
-     * The first file has 100 traces (500 samples/trace) and the second has 50 traces
-     * (250 samples/trace). Both use format code 5.
-     *
-     * @return byte array with two concatenated SEG-Y logical files
-     */
-    static byte[] buildMultiLogicalSegyFile() {
-        byte[] first  = buildSegyFile(500, FORMAT_CODE_IEEE_FLOAT32, 100, "multi-part-1");
-        byte[] second = buildSegyFile(250, FORMAT_CODE_IEEE_FLOAT32, 50,  "multi-part-2");
-        byte[] combined = new byte[first.length + second.length];
-        System.arraycopy(first,  0, combined, 0,            first.length);
-        System.arraycopy(second, 0, combined, first.length, second.length);
-        return combined;
-    }
-
     // -------------------------------------------------------------------------
     // Corruption injection methods
     // -------------------------------------------------------------------------
@@ -270,23 +248,25 @@ public class SegyFixtureGenerator {
     /**
      * Generates and writes all three corrupted fixtures:
      * <ol>
-     *   <li>corrupt_ebcdic.segy — EBCDIC header bytes 10-330 overwritten with 0x01</li>
+     *   <li>corrupt_ebcdic.segy — EBCDIC header bytes 0-320 overwritten with 0x01 (321 bytes,
+     *       exceeding the SegyValidator threshold of &gt; 320 invalid control bytes)</li>
      *   <li>corrupt_binary.segy — samplesPerTrace set to 0 in binary header</li>
      *   <li>corrupt_mid_file.segy — medium fixture truncated after 50 complete traces + half a trace</li>
      * </ol>
      */
-    private static void writeCorrectedFixtures(Path dir, byte[] minimal, byte[] medium)
+    private static void writeCorruptedFixtures(Path dir, byte[] minimal, byte[] medium)
             throws IOException {
         // Corruption 1: inject invalid control bytes (0x01–0x08) into EBCDIC header.
-        // The SegyValidator rejects headers where > 10% of bytes are in 0x01-0x08 range.
-        // We inject them densely to ensure rejection.
+        // SegyValidator.validateEbcdicHeader() rejects when invalidLowByteCount > EBCDIC_HEADER_SIZE / 10.
+        // EBCDIC_HEADER_SIZE / 10 = 3200 / 10 = 320, so we need > 320 invalid bytes.
+        // We inject 0x01 at positions 0 through 320 (inclusive) = 321 bytes to guarantee rejection.
         byte[] corruptEbcdic = minimal.clone();
-        for (int i = 10; i < 330; i++) {
-            corruptEbcdic[i] = 0x01; // invalid control byte
+        for (int i = 0; i <= 320; i++) {
+            corruptEbcdic[i] = 0x01; // invalid control byte — 321 bytes total, exceeds threshold of 320
         }
         write(dir, "corrupt_ebcdic.segy", corruptEbcdic);
-        LOG.info("Written corrupt_ebcdic.segy — {} bytes of control bytes injected at offset 10",
-                320);
+        LOG.info("Written corrupt_ebcdic.segy — 321 bytes of control bytes injected at offsets 0-320",
+                (Object) null);
 
         // Corruption 2: set samplesPerTrace = 0 in binary header (offset 3200 + 20 = 3220)
         byte[] corruptBinary = minimal.clone();
