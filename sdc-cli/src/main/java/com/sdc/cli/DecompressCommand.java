@@ -39,10 +39,7 @@ public class DecompressCommand implements Runnable {
     @Override
     public void run() {
         // TODO (TASK-023): validate .sdc magic, invoke SegyCompression.decompress(), report restored size.
-        System.err.println("[sdc decompress] Not yet implemented — tracked in TASK-023.");
-        throw new picocli.CommandLine.ParameterException(
-                new picocli.CommandLine(this),
-                "decompress subcommand not yet implemented (TASK-023)"
-        );
+        System.err.println("[sdc] Command not yet implemented. This feature will be available in a future release.");
+        System.exit(1);
     }
 }

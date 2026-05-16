@@ -41,10 +41,7 @@ public class CompressCommand implements Runnable {
     @Override
     public void run() {
         // TODO (TASK-022): invoke SegyValidator, SegyCompression.compress(), report progress/ratio.
-        System.err.println("[sdc compress] Not yet implemented — tracked in TASK-022.");
-        throw new picocli.CommandLine.ParameterException(
-                new picocli.CommandLine(this),
-                "compress subcommand not yet implemented (TASK-022)"
-        );
+        System.err.println("[sdc] Command not yet implemented. This feature will be available in a future release.");
+        System.exit(1);
     }
 }
