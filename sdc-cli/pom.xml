@@ -15,21 +15,36 @@
 
   <dependencies>
 
+    <!-- Picocli runtime -->
     <dependency>
       <groupId>info.picocli</groupId>
       <artifactId>picocli</artifactId>
     </dependency>
 
+    <!-- sdc-core: SEG-Y I/O, codec pipeline, validators -->
+    <!-- NOTE: sdc-ai is intentionally excluded to avoid transitive TF Java
+         native binaries in the CLI uber-JAR. AI integration via sdc-ai will
+         be wired in a future task when a lightweight shim is available. -->
     <dependency>
       <groupId>com.sdc</groupId>
       <artifactId>sdc-core</artifactId>
     </dependency>
 
+    <!-- SLF4J API — logging facade -->
     <dependency>
-      <groupId>com.sdc</groupId>
-      <artifactId>sdc-ai</artifactId>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
     </dependency>
 
+    <!-- SLF4J simple backend for standalone CLI execution -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <!-- JUnit 5 — unit tests -->
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
@@ -40,29 +55,65 @@
 
   <build>
     <plugins>
+
+      <!-- Picocli annotation processor — generates GraalVM reflection metadata
+           and @Command reflection-free dispatch. Declared as annotationProcessorPath
+           so it runs at compile time only and is NOT included in the uber-JAR. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
+        <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <descriptorRefs>
-            <descriptorRef>jar-with-dependencies</descriptorRef>
-          </descriptorRefs>
-          <archive>
-            <manifest>
-              <mainClass>com.sdc.cli.Main</mainClass>
-            </manifest>
-          </archive>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>info.picocli</groupId>
+              <artifactId>picocli-codegen</artifactId>
+              <version>${picocli.version}</version>
+            </path>
+          </annotationProcessorPaths>
+          <compilerArgs>
+            <arg>-Aproject=${project.groupId}/${project.artifactId}</arg>
+          </compilerArgs>
         </configuration>
+      </plugin>
+
+      <!-- maven-shade-plugin: produces a single uber-JAR containing all
+           runtime dependencies. The classifier "exec" prevents the shaded
+           artifact from replacing the thin JAR in the local Maven repo. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.5.2</version>
         <executions>
           <execution>
-            <id>make-assembly</id>
             <phase>package</phase>
             <goals>
-              <goal>single</goal>
+              <goal>shade</goal>
             </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>exec</shadedClassifierName>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>com.sdc.cli.Main</mainClass>
+                </transformer>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <!-- Suppress signature validation warnings for signed JARs -->
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
           </execution>
         </executions>
       </plugin>
+
     </plugins>
   </build>
 
