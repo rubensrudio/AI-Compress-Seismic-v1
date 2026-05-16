@@ -1,0 +1,9 @@
+META-INF\native-image\picocli-generated\com.sdc\sdc-cli\reflect-config.json
+META-INF\native-image\picocli-generated\com.sdc\sdc-cli\resource-config.json
+com\sdc\cli\DecompressCommand.class
+META-INF\native-image\picocli-generated\com.sdc\sdc-cli\proxy-config.json
+com\sdc\cli\InspectCommand.class
+com\sdc\cli\Main.class
+com\sdc\cli\CompressCommand.class
+com\sdc\cli\BenchmarkCommand.class
+com\sdc\cli\ValidateCommand.class
