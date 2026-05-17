@@ -522,6 +522,7 @@
   - `sdc-ui/src/app/services/sdc-api.service.spec.ts`
 - **Descrição**: Criar `SdcApiService` com métodos: `compress(file: File): Observable<Blob>` (POST `/compress` com `application/octet-stream`), `decompress(file: File): Observable<Blob>` (POST `/decompress`), `getHealth(): Observable<HealthResponse>` (GET `/health`), `getBenchmark(): Observable<BenchmarkResponse>` (GET `/benchmark`). Tipar as respostas com interfaces TypeScript. Incluir tratamento de erros HTTP (4xx / 5xx). Testar com `HttpClientTestingModule`.
 - **Critério de verificação**: `ng test` com testes do `SdcApiService` verde; mock de `POST /compress` retorna Blob e mock de erro retorna Observable com erro tipado.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-028
 
 ---
 
@@ -539,6 +540,7 @@
   - `sdc-ui/src/app/components/file-inspector/file-inspector.component.html`
 - **Descrição**: Criar `FileInspectorComponent` com: zona de drag-and-drop / input de arquivo para upload de SEG-Y; após upload, exibir header EBCDIC decodificado como `<pre>` com fonte monoespaçada; exibir campos do header binário em `<mat-table>` (samples/trace, sample interval, format code, trace count); exibir preview dos primeiros N traços como waveform simples (Canvas ou SVG com `@for` de pontos). Usar `Angular Material` para layout.
 - **Critério de verificação**: Componente renderiza sem erro com arquivo SEG-Y de fixture sintética carregado via FileReader; header EBCDIC aparece como texto legível; tabela de header binário exibe os campos.
+- **Status**: ✅ APROVADA_AGUARDANDO_SMOKE em 2026-05-16 — branch: feature/initial-TASK-029
 
 ---
 
