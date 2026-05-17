@@ -38,6 +38,14 @@
       <artifactId>sdc-ai</artifactId>
     </dependency>
 
+    <!-- Jackson: used by BenchmarkReporter to serialise JMH results to
+         latest.json.  Version managed by the parent BOM — no explicit version
+         here so the BOM remains the single source of truth. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

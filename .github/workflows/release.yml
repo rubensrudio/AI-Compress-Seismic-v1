@@ -94,7 +94,7 @@ jobs:
       # Run sdc-bench via mvn verify.  The Maven Exec plugin in sdc-bench/pom.xml
       # invokes the JMH runner (BenchmarkRunner.main) which writes
       # target/jmh-results/latest.json via BenchmarkReporter.
-      # -DskipTests skips Surefire; the actual benchmark runs via exec:java.
+      # -DskipTests skips Surefire; the actual benchmark runs via exec:exec (fork via uber-JAR).
       - name: Run JMH benchmarks (sdc-bench)
         run: |
           mvn verify \
@@ -155,22 +155,30 @@ jobs:
   # ---------------------------------------------------------------------------
   # Job 4 — Build and push sdc-ui Docker image to halotechlabs.com
   #
-  # Secret required: HALOTECHLABS_DEPLOY_KEY
-  #   The SSH private key used to authenticate to the Docker registry at
-  #   halotechlabs.com.  Configure as a repository secret in GitHub:
-  #     Settings → Secrets and variables → Actions → New repository secret
-  #     Name:  HALOTECHLABS_DEPLOY_KEY
-  #     Value: <paste the private key content (PEM format)>
+  # Deploy strategy: SSH tunnel via Docker context (no docker/login-action).
+  # docker/login-action expects registry credentials (username + password);
+  # HALOTECHLABS_DEPLOY_KEY is an SSH private key, not a registry password,
+  # so using it as `password:` is semantically wrong and would be rejected by
+  # the registry.  Instead we:
+  #   1. Load the SSH key into ssh-agent via webfactory/ssh-agent.
+  #   2. Create a Docker context that tunnels all Docker API calls over SSH.
+  #   3. Build locally with docker/build-push-action, then push via the SSH
+  #      context so credentials never leave the SSH layer.
   #
-  # The key must not have a passphrase (or the passphrase must be passed via
-  # another secret — adjust the ssh-agent setup below accordingly).
+  # Required secrets:
+  #   HALOTECHLABS_DEPLOY_KEY — SSH private key (RSA or Ed25519, no passphrase)
+  #                             authorised for deploy@halotechlabs.com
+  #                             (i.e. present in authorized_keys on the host).
   #
-  # The registry FQDN defaults to "registry.halotechlabs.com".  Override by
-  # adding a repository secret named HALOTECHLABS_REGISTRY.
+  # Optional secrets:
+  #   HALOTECHLABS_REGISTRY   — FQDN of the Docker registry
+  #                             (default: registry.halotechlabs.com)
   # ---------------------------------------------------------------------------
   docker:
     name: Build & Push sdc-ui Docker image
-    needs: ci
+    # B3 fix: docker only runs after both ci AND benchmark succeed, so that
+    # latest.json is guaranteed to exist before the image is published.
+    needs: [ci, benchmark]
     runs-on: ubuntu-latest
 
     env:
@@ -183,39 +191,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Configure SSH agent with the deploy key.
-      # This key is used by Docker to authenticate to the private registry at
-      # halotechlabs.com via SSH-based Docker context or registry credentials.
-      - name: Configure SSH agent with deploy key
+      # Step 1: Load the SSH private key into the agent.
+      # webfactory/ssh-agent sets SSH_AUTH_SOCK so subsequent ssh and docker
+      # commands can use the key transparently.
+      - name: Load SSH deploy key (webfactory/ssh-agent)
         uses: webfactory/ssh-agent@v0.9.0
         with:
+          # Required secret: SSH private key authorised for deploy@halotechlabs.com
           ssh-private-key: ${{ secrets.HALOTECHLABS_DEPLOY_KEY }}
 
-      - name: Set up Docker Buildx
+      # Step 2: Create a Docker context that routes the Docker daemon API over
+      # SSH.  This avoids registry password authentication entirely — the SSH
+      # key loaded above authenticates the tunnel.
+      - name: Create remote Docker context via SSH
+        run: |
+          docker context create remote \
+            --docker "host=ssh://deploy@halotechlabs.com"
+
+      - name: Set up Docker Buildx (using remote context)
         uses: docker/setup-buildx-action@v3
-
-      # Log in to the halotechlabs.com private Docker registry.
-      # The SSH key loaded above is the authentication mechanism; the registry
-      # must be configured to accept key-based auth (e.g. via an SSH tunnel
-      # or a registry proxy that maps SSH keys to Docker credentials).
-      # Adjust the login step if the registry uses username/password instead:
-      #   username: ${{ secrets.HALOTECHLABS_REGISTRY_USER }}
-      #   password: ${{ secrets.HALOTECHLABS_REGISTRY_PASSWORD }}
-      - name: Log in to halotechlabs.com registry
-        uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          # SSH-key-based login: the registry proxy reads the SSH agent socket.
-          # Replace with username/password secrets if the registry requires it.
-          username: deploy
-          password: ${{ secrets.HALOTECHLABS_DEPLOY_KEY }}
+          endpoint: remote
 
-      # Build the sdc-ui Docker image using the multi-stage Dockerfile in
-      # sdc-ui/.  The Dockerfile:
+      # Step 3: Build the sdc-ui image locally and push it to the remote
+      # registry through the SSH tunnel.  No registry login is required because
+      # the remote Docker daemon performs the push from inside the host network.
+      #
+      # Dockerfile stages:
       #   Stage 1 (builder): node:18-alpine — npm ci + ng build --configuration=production
       #   Stage 2 (serve):   nginx:alpine   — serves the Angular app under
       #                                       /demo/seismic-compressor
-      - name: Build and push Docker image
+      - name: Build and push Docker image via SSH context
         uses: docker/build-push-action@v5
         with:
           context: sdc-ui
@@ -230,6 +236,7 @@ jobs:
       # Smoke-test: verify the image was pushed by pulling its manifest.
       - name: Verify image pushed successfully
         run: |
+          DOCKER_HOST=ssh://deploy@halotechlabs.com \
           docker manifest inspect \
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" \
             && echo "PASS: image manifest found." \
