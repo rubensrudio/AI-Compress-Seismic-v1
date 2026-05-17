@@ -1,0 +1,36 @@
+package com.sdc.rest.config;
+
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
+
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI sdcOpenAPI() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("Seismic Data Compressor API")
+                        .description("REST API for SEG-Y compression/decompression and SDC file viewing. " +
+                                "Supports both 2D and 3D seismic data with intelligent caching and volume slicing.")
+                        .version("1.0.0")
+                        .contact(new Contact()
+                                .name("SDC Team")
+                                .email("support@sdc.com"))
+                        .license(new License()
+                                .name("Apache 2.0")
+                                .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
+                .servers(List.of(
+                        new Server()
+                                .url("http://localhost:8080")
+                                .description("Development server")
+                ));
+    }
+}
