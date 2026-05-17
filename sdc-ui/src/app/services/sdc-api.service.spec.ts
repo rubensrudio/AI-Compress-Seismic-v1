@@ -183,7 +183,7 @@ describe('SdcApiService', () => {
     it('should GET /api/benchmark and return BenchmarkResponse', (done) => {
       const mockResponse: BenchmarkResponse = {
         compression_ratio: 3.5,
-        throughput_mbps: 76.6,
+        throughput_mb_s: 76.6,
         dataset_size_gb: 1.71,
         timestamp: '2026-05-16T00:00:00Z'
       };
@@ -191,7 +191,7 @@ describe('SdcApiService', () => {
       service.getBenchmark().subscribe({
         next: (result: BenchmarkResponse) => {
           expect(result.compression_ratio).toBe(3.5);
-          expect(result.throughput_mbps).toBe(76.6);
+          expect(result.throughput_mb_s).toBe(76.6);
           done();
         },
         error: done.fail
