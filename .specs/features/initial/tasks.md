@@ -516,7 +516,7 @@
   - `sdc-ui/angular.json`
 - **Descrição**: Criar o projeto Angular 18 em `sdc-ui/` via `ng new sdc-ui --routing --style=scss --standalone`. Adicionar Angular Material (`ng add @angular/material`) com tema consistente com `halotechlabs` e `musicianjob-frontend` do monorepo. Configurar `proxy.conf.json` para redirecionar chamadas `/api` para `http://localhost:8080` em desenvolvimento. Configurar `environment.ts` e `environment.prod.ts` com a URL da API REST. Adicionar `sdc-ui` como módulo no parent POM com `frontend-maven-plugin` ou instruções de build separadas no README.
 - **Critério de verificação**: `npm install && ng serve` inicia sem erro em `sdc-ui/`; página em branco carrega no browser sem erros no console.
-- **Status**: ✅ APROVADA_AGUARDANDO_SMOKE em 2026-05-16 — branch: feature/initial-TASK-027
+- **Status**: ✅ APROVADA em 2026-05-17 (smoke) — branch: feature/initial-TASK-027
 
 ---
 
@@ -552,7 +552,7 @@
   - `sdc-ui/src/app/components/file-inspector/file-inspector.component.html`
 - **Descrição**: Criar `FileInspectorComponent` com: zona de drag-and-drop / input de arquivo para upload de SEG-Y; após upload, exibir header EBCDIC decodificado como `<pre>` com fonte monoespaçada; exibir campos do header binário em `<mat-table>` (samples/trace, sample interval, format code, trace count); exibir preview dos primeiros N traços como waveform simples (Canvas ou SVG com `@for` de pontos). Usar `Angular Material` para layout.
 - **Critério de verificação**: Componente renderiza sem erro com arquivo SEG-Y de fixture sintética carregado via FileReader; header EBCDIC aparece como texto legível; tabela de header binário exibe os campos.
-- **Status**: ✅ APROVADA_AGUARDANDO_SMOKE em 2026-05-16 — branch: feature/initial-TASK-029
+- **Status**: ✅ APROVADA em 2026-05-17 (smoke) — branch: feature/initial-TASK-029
 
 ---
 
@@ -570,7 +570,7 @@
   - `sdc-ui/src/app/components/compression-preview/compression-preview.component.html`
 - **Descrição**: Criar `CompressionPreviewComponent` que, após o upload do arquivo no `FileInspectorComponent`, exibe: tamanho original do arquivo, estimativa de ratio de compressão (obtida do `GET /benchmark` como `compression_ratio`), botão "Comprimir" que aciona `SdcApiService.compress()` e faz download do arquivo `.sdc` resultante. Exibir progresso via `mat-progress-bar`. Exibir ratio real calculado após compressão (tamanho original / tamanho do `.sdc`).
 - **Critério de verificação**: Componente exibe ratio estimado após upload; clique em "Comprimir" dispara POST e o browser baixa o arquivo `.sdc`; feedback visual de progresso aparece durante a requisição.
-- **Status**: ✅ APROVADA_AGUARDANDO_SMOKE em 2026-05-16 — branch: feature/initial-TASK-030
+- **Status**: ✅ APROVADA em 2026-05-17 (smoke) — branch: feature/initial-TASK-030
 
 ---
 
