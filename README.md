@@ -164,16 +164,6 @@ Expected result: all tests pass. The key test suites are:
 | `SegyValidatorTest` | sdc-core | — | Format validation edge cases |
 | `AePredictorTest` | sdc-ai | — | TF model load + identity inference |
 
-### Step 3 — Build the Angular UI
-
-```bash
-cd sdc-ui
-npm install
-npm run build -- --configuration=production
-```
-
-Build output goes to `sdc-ui/dist/`. Bundle size warnings (~632 kB initial) are expected with Angular Material and do not affect functionality.
-
 ### Test individual modules
 
 ```bash
@@ -182,6 +172,17 @@ mvn test -pl sdc-core   # codecs, validators, container I/O
 mvn test -pl sdc-cli    # CLI commands
 mvn test -pl sdc-ai     # TF model load
 ```
+
+### Step 3 — Build the Angular UI
+
+```bash
+cd sdc-ui
+npm install
+npm run build -- --configuration=production
+cd ..
+```
+
+Build output goes to `sdc-ui/dist/`. Bundle size warnings (~632 kB initial) are expected with Angular Material and do not affect functionality.
 
 ---
 
