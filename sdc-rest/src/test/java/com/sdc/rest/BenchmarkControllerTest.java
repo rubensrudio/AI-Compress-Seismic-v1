@@ -12,6 +12,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.net.URL;
 import java.nio.file.Paths;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 /**
  * Unit-level tests for {@link BenchmarkController} using {@code @WebFluxTest}.
  *
@@ -80,21 +82,14 @@ class BenchmarkControllerTest {
                 .expectBody(String.class)
                 .consumeWith(result -> {
                     String body = result.getResponseBody();
-                    assert body != null : "Response body must not be null";
-                    assert body.contains("throughput_mb_s")
-                            : "Missing key 'throughput_mb_s' in: " + body;
-                    assert body.contains("compression_ratio")
-                            : "Missing key 'compression_ratio' in: " + body;
-                    assert body.contains("dataset_size_gb")
-                            : "Missing key 'dataset_size_gb' in: " + body;
-                    assert body.contains("speedup_vs_prior_java_baseline")
-                            : "Missing key 'speedup_vs_prior_java_baseline' in: " + body;
-                    assert body.contains("timestamp")
-                            : "Missing key 'timestamp' in: " + body;
-                    assert body.contains("version")
-                            : "Missing key 'version' in: " + body;
-                    assert body.contains("reference_hardware")
-                            : "Missing key 'reference_hardware' in: " + body;
+                    assertThat(body).as("Response body must not be null").isNotNull();
+                    assertThat(body).as("Missing key 'throughput_mb_s'").contains("throughput_mb_s");
+                    assertThat(body).as("Missing key 'compression_ratio'").contains("compression_ratio");
+                    assertThat(body).as("Missing key 'dataset_size_gb'").contains("dataset_size_gb");
+                    assertThat(body).as("Missing key 'speedup_vs_prior_java_baseline'").contains("speedup_vs_prior_java_baseline");
+                    assertThat(body).as("Missing key 'timestamp'").contains("timestamp");
+                    assertThat(body).as("Missing key 'version'").contains("version");
+                    assertThat(body).as("Missing key 'reference_hardware'").contains("reference_hardware");
                 });
     }
 
@@ -174,21 +169,27 @@ class BenchmarkControllerWithFileTest {
                 .expectBody(String.class)
                 .consumeWith(result -> {
                     String body = result.getResponseBody();
-                    assert body != null : "Response body must not be null";
+                    assertThat(body).as("Response body must not be null").isNotNull();
 
                     com.fasterxml.jackson.databind.ObjectMapper mapper =
                             new com.fasterxml.jackson.databind.ObjectMapper();
                     try {
                         com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(body);
                         com.fasterxml.jackson.databind.JsonNode node = root.get("throughput_mb_s");
-                        assert node != null && !node.isNull()
-                                : "throughput_mb_s must not be null when latest.json is present; body=" + body;
+                        assertThat(node)
+                                .as("throughput_mb_s must not be null when latest.json is present; body=%s", body)
+                                .isNotNull();
+                        assertThat(node.isNull())
+                                .as("throughput_mb_s node must not be JSON null; body=%s", body)
+                                .isFalse();
                         double actual = node.asDouble();
                         double delta = Math.abs(actual - expectedThroughput);
-                        assert delta <= expectedThroughput * 0.01
-                                : String.format(
-                                        "throughput_mb_s=%.4f differs from expected=%.4f by more than 1%%; body=%s",
-                                        actual, expectedThroughput, body);
+                        assertThat(delta)
+                                .as("throughput_mb_s=%.4f differs from expected=%.4f by more than 1%%; body=%s",
+                                        actual, expectedThroughput, body)
+                                .isLessThanOrEqualTo(expectedThroughput * 0.01);
+                    } catch (AssertionError e) {
+                        throw e;
                     } catch (Exception e) {
                         throw new RuntimeException("Failed to parse response body: " + body, e);
                     }
