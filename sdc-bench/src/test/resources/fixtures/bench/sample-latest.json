@@ -1,0 +1,28 @@
+[
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "com.sdc.bench.SdcDecodeBenchmark.decodeFullPipeline",
+    "mode": "thrpt",
+    "threads": 1,
+    "forks": 1,
+    "primaryMetric": {
+      "score": 1000.0,
+      "scoreError": "NaN",
+      "scoreUnit": "ops/s"
+    },
+    "secondaryMetrics": {}
+  },
+  {
+    "jmhVersion": "1.37",
+    "benchmark": "com.sdc.bench.SdcEncodeBenchmark.encodeFullPipeline",
+    "mode": "thrpt",
+    "threads": 1,
+    "forks": 1,
+    "primaryMetric": {
+      "score": 1600.0,
+      "scoreError": "NaN",
+      "scoreUnit": "ops/s"
+    },
+    "secondaryMetrics": {}
+  }
+]

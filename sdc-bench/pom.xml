@@ -38,6 +38,15 @@
       <artifactId>sdc-ai</artifactId>
     </dependency>
 
+    <!-- Jackson Databind: required by BenchmarkReporter to parse latest.json.
+         Version aligned with Spring Boot 3.3.5 BOM (2.17.2); explicit here
+         because sdc-bench does not inherit from spring-boot-dependencies. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.17.2</version>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
