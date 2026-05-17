@@ -1,0 +1,142 @@
+<mat-card class="inspector-card" aria-label="SEG-Y File Inspector">
+  <mat-card-header>
+    <mat-card-title>SEG-Y File Inspector</mat-card-title>
+    <mat-card-subtitle>Upload a SEG-Y Rev1 file to inspect its headers and trace waveforms</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- Drop Zone -->
+    <div
+      class="drop-zone"
+      [class.drop-zone--active]="isDragOver"
+      role="button"
+      tabindex="0"
+      aria-label="Drop zone for SEG-Y file upload. Press Enter or Space to open file picker."
+      (click)="openFilePicker()"
+      (keydown.enter)="openFilePicker()"
+      (keydown.space)="openFilePicker()"
+      (dragenter)="onDragEnter($event)"
+      (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)"
+      (drop)="onDrop($event)">
+
+      <mat-icon class="drop-zone__icon" aria-hidden="true">upload_file</mat-icon>
+      <p class="drop-zone__primary-text">
+        Drag &amp; drop a <strong>.segy</strong> / <strong>.sgy</strong> file here
+      </p>
+      <p class="drop-zone__secondary-text">or click to select a file</p>
+
+      <!-- Hidden native file input -->
+      <input
+        #fileInput
+        type="file"
+        accept=".segy,.sgy,.sgy2"
+        class="drop-zone__hidden-input"
+        aria-hidden="true"
+        tabindex="-1"
+        (change)="onFileInputChange($event)"
+      />
+    </div>
+
+    <!-- Loading spinner -->
+    @if (loading()) {
+      <div class="loading-container" role="status" aria-live="polite" aria-label="Parsing SEG-Y file...">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p class="loading-text">Parsing SEG-Y file&hellip;</p>
+      </div>
+    }
+
+    <!-- Error state -->
+    @if (errorMessage()) {
+      <div class="error-banner" role="alert" aria-live="assertive">
+        <mat-icon class="error-banner__icon" aria-hidden="true">error_outline</mat-icon>
+        <p class="error-banner__text">{{ errorMessage() }}</p>
+      </div>
+    }
+
+    <!-- Results panel (shown only after successful parse) -->
+    @if (hasParsedFile()) {
+
+      <!-- EBCDIC Header -->
+      <section class="result-section" aria-labelledby="ebcdic-heading">
+        <h2 id="ebcdic-heading" class="result-section__title">EBCDIC Textual Header</h2>
+        <pre class="ebcdic-pre" aria-label="Decoded EBCDIC header text">{{ ebcdicText() }}</pre>
+      </section>
+
+      <!-- Binary Header Table -->
+      <section class="result-section" aria-labelledby="binary-heading">
+        <h2 id="binary-heading" class="result-section__title">Binary File Header</h2>
+        <table
+          mat-table
+          [dataSource]="binaryHeaderRows()"
+          class="binary-header-table"
+          aria-label="Binary header fields from the SEG-Y file">
+
+          <!-- Field column -->
+          <ng-container matColumnDef="field">
+            <th mat-header-cell *matHeaderCellDef scope="col">Field</th>
+            <td mat-cell *matCellDef="let row">{{ row.field }}</td>
+          </ng-container>
+
+          <!-- Value column -->
+          <ng-container matColumnDef="value">
+            <th mat-header-cell *matHeaderCellDef scope="col">Value</th>
+            <td mat-cell *matCellDef="let row" class="value-cell">{{ row.value }}</td>
+          </ng-container>
+
+          <!-- Unit column -->
+          <ng-container matColumnDef="unit">
+            <th mat-header-cell *matHeaderCellDef scope="col">Unit / Note</th>
+            <td mat-cell *matCellDef="let row" class="unit-cell">{{ row.unit }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+      </section>
+
+      <!-- Waveform Preview -->
+      @if (waveformTraces().length > 0) {
+        <section class="result-section" aria-labelledby="waveform-heading">
+          <h2 id="waveform-heading" class="result-section__title">
+            Waveform Preview — First {{ waveformTraces().length }} Trace(s)
+          </h2>
+
+          <div class="waveform-grid">
+            @for (trace of waveformTraces(); track trace.traceIndex) {
+              <figure class="waveform-figure">
+                <figcaption class="waveform-caption">Trace {{ trace.traceIndex }}</figcaption>
+                <svg
+                  [attr.width]="trace.width"
+                  [attr.height]="trace.height"
+                  class="waveform-svg"
+                  role="img"
+                  [attr.aria-label]="'Waveform chart for trace ' + trace.traceIndex">
+                  <title>Waveform — Trace {{ trace.traceIndex }}</title>
+                  <polyline
+                    [attr.points]="trace.points"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linejoin="round"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </figure>
+            }
+          </div>
+        </section>
+      } @else {
+        <section class="result-section" aria-labelledby="waveform-heading">
+          <h2 id="waveform-heading" class="result-section__title">Waveform Preview</h2>
+          <p class="empty-state" role="status">
+            No trace data available — file may contain only the headers (no recorded traces).
+          </p>
+        </section>
+      }
+
+    }
+
+  </mat-card-content>
+</mat-card>
