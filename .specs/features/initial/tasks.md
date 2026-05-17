@@ -624,7 +624,7 @@
   - `.github/workflows/release.yml`
 - **Descrição**: Criar dois workflows GitHub Actions. `ci.yml` (todo push/PR): (a) `mvn verify` nos módulos `sdc-core`, `sdc-ai`, `sdc-rest`, `sdc-cli`, `sdc-fixtures` com JDK 17; (b) `ng test --watch=false` em `sdc-ui`; (c) gate de corretude: falha se `SdcRoundTripTest` falhar; (d) verificação de ausência de `ForkJoinPool` no código de produção (`grep -r ForkJoinPool sdc-core/src/main sdc-ai/src/main` deve retornar vazio). `release.yml` (push em tag `v*`): (a) executa `ci.yml`; (b) executa `mvn verify -pl sdc-bench` para gerar `latest.json`; (c) publica `latest.json` como release asset; (d) build e push Docker de `sdc-ui` para halotechlabs.com via secret `HALOTECHLABS_DEPLOY_KEY`.
 - **Critério de verificação**: Push de PR aciona `ci.yml` e bloqueia merge se qualquer teste falhar; push de tag `v1.0.0` aciona `release.yml` e publica `latest.json` como release asset.
-- **Status**: ⛔ BLOQUEADA_NEEDS_HUMAN — motivo: 2 rodadas reviewer reprovadas; pendente: (1) step known_hosts para SSH no job docker do release.yml; (2) docker context create idempotente (`docker context rm remote 2>/dev/null || true` antes do create). Branch: feature/initial-TASK-033
+- **Status**: ✅ APROVADA em 2026-05-17 (fix humano) — branch: feature/initial-TASK-033
 
 ---
 
