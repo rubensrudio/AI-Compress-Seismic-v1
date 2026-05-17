@@ -415,6 +415,7 @@
   - `sdc-cli/src/test/java/com/sdc/cli/CompressCommandTest.java`
 - **Descrição**: Criar `CompressCommand` com `@Command(name = "compress")`. Parâmetros: `<input.segy>` (obrigatório), `<output.sdc>` (obrigatório), `--profile [HIGH_QUALITY|BALANCED|HIGH_COMPRESSION]` (opcional, default BALANCED). Executar `SegyValidator` antes do encode; em falha, exibir erro e sair com código 1. Ao final, exibir progresso, ratio de compressão e throughput (MB/s). Sair com código 0 em sucesso.
 - **Critério de verificação**: Teste funcional com fixture sintética: `CompressCommand` produz arquivo `.sdc` que pode ser decodificado para SEG-Y idêntico ao original; exit code 0 em sucesso, 1 em falha.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-022
 
 ---
 
@@ -432,6 +433,7 @@
   - `sdc-cli/src/test/java/com/sdc/cli/DecompressCommandTest.java`
 - **Descrição**: Criar `DecompressCommand` com `@Command(name = "decompress")`. Parâmetros: `<input.sdc>` (obrigatório), `<output.segy>` (obrigatório), `--template <original.segy>` (opcional — para compatibilidade com `.sdc` sem headers embutidos). Validar magic do container antes de processar. Exibir tamanho restaurado ao final. Exit code 0 / 1.
 - **Critério de verificação**: Teste funcional: arquivo produzido por `CompressCommand` é descomprimido para SEG-Y byte-a-byte idêntico ao original (format code 5); exit code correto nos dois cenários.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-023
 
 ---
 
@@ -449,6 +451,7 @@
   - `sdc-cli/src/test/java/com/sdc/cli/ValidateCommandTest.java`
 - **Descrição**: Criar `ValidateCommand` com `@Command(name = "validate")`. Parâmetro: `<file.segy>` (obrigatório). Chamar `SegyValidator.validate()`; em sucesso, exibir "OK — arquivo SEG-Y Rev1 válido"; em falha, exibir lista de erros com byte offset. Exit code 0 se válido, 1 se inválido. Testar com fixtures válidas e com arquivos corrompidos.
 - **Critério de verificação**: Fixtures sintéticas válidas: exit 0 + mensagem OK; arquivo corrompido: exit 1 + mensagem com byte offset; teste funcional passa.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-024
 
 ---
 
@@ -466,6 +469,7 @@
   - `sdc-cli/src/test/java/com/sdc/cli/InspectCommandTest.java`
 - **Descrição**: Criar `InspectCommand` com `@Command(name = "inspect")`. Parâmetro: `<file.segy>` (obrigatório). Usar `SegyIO.read()` para extrair metadados e exibir tabela com: número de traços, samples/trace, intervalo de amostragem (ms), format code, inline/xline range (se presente no header de traço), data de aquisição (se presente no header EBCDIC). Exit code 0 / 1.
 - **Critério de verificação**: Teste funcional com fixture sintética exibe todos os campos esperados na stdout; exit code 0.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-025
 
 ---
 
