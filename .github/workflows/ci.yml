@@ -1,0 +1,172 @@
+# =============================================================================
+# CI Workflow — AI-Compress-Seismic-v1
+#
+# Triggers: every push and every pull request to any branch.
+# Purpose:  (a) build + test all Java modules with JDK 17,
+#           (b) run Angular 18 unit tests in ChromeHeadless,
+#           (c) enforce correctness gate (SdcRoundTripTest),
+#           (d) verify no ForkJoinPool usage in production code.
+#
+# Required GitHub secrets:
+#   None for this workflow (CI only, no deployment).
+#
+# Workaround — sdc-core / sdc-fixtures dependency cycle:
+#   sdc-core tests depend on fixtures that sdc-fixtures generates, and
+#   sdc-fixtures has a compile-time dependency on sdc-core.  The bootstrap
+#   sequence below breaks the cycle:
+#     1. mvn install -pl sdc-fixtures -DskipTests  (compile + install fixtures jar)
+#     2. mvn verify  -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-fixtures
+#   Running `mvn verify` from the root with all modules at once fails because
+#   Maven cannot resolve the cycle.  This two-step workaround is documented in
+#   the project README (sdc-core/README.md, "Dependency Cycle" section).
+# =============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  # Allow release.yml (and any other caller) to invoke this workflow directly
+  # via `uses: ./.github/workflows/ci.yml` without duplicating job definitions.
+  workflow_call: {}
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # Job 1 — Java modules: build, test, correctness gate
+  # ---------------------------------------------------------------------------
+  java-verify:
+    name: Java Verify (JDK 17)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "maven"
+
+      # Step 1 of the bootstrap: install sdc-fixtures without running its own
+      # tests (they depend on sdc-core which is not installed yet).
+      - name: Bootstrap — install sdc-fixtures (skip tests to break cycle)
+        run: |
+          mvn install \
+            --no-transfer-progress \
+            -pl sdc-fixtures \
+            -DskipTests
+
+      # Step 2: verify all target modules.  sdc-core tests (including
+      # SdcRoundTripTest) now have sdc-fixtures on the local Maven repo.
+      # sdc-bench is excluded here; it runs only in the release workflow
+      # because it is slow (JMH fork process).
+      - name: Verify modules (sdc-core, sdc-ai, sdc-rest, sdc-cli, sdc-fixtures)
+        run: |
+          mvn verify \
+            --no-transfer-progress \
+            -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-fixtures
+
+      # ---------------------------------------------------------------------------
+      # Gate (c): Correctness — SdcRoundTripTest
+      # The test is part of sdc-core's Surefire run above.  If SdcRoundTripTest
+      # fails, `mvn verify` exits non-zero and the job fails before reaching
+      # this step.  This explicit step documents the requirement and re-states
+      # the gate so it is visible in the GitHub Actions summary.
+      # ---------------------------------------------------------------------------
+      - name: Gate — confirm SdcRoundTripTest result
+        run: |
+          REPORT_DIR=sdc-core/target/surefire-reports
+          REPORT_FILE="${REPORT_DIR}/com.sdc.core.SdcRoundTripTest.txt"
+          if [ -f "${REPORT_FILE}" ]; then
+            echo "=== SdcRoundTripTest report ==="
+            cat "${REPORT_FILE}"
+            # Grep for failures; if found, fail the gate.
+            if grep -q "FAILURE\|ERROR" "${REPORT_FILE}"; then
+              echo "ERROR: SdcRoundTripTest has failures — blocking merge."
+              exit 1
+            fi
+            echo "PASS: SdcRoundTripTest passed."
+          else
+            echo "ERROR: SdcRoundTripTest report not found at ${REPORT_FILE}."
+            echo "Listing available reports:"
+            ls "${REPORT_DIR}" 2>/dev/null || echo "(directory empty or missing)"
+            # Fail explicitly: an absent report means the test never ran, which
+            # is itself a correctness violation (RNF-02, RNF-08 in spec.md).
+            exit 1
+          fi
+
+      # ---------------------------------------------------------------------------
+      # Gate (d): No ForkJoinPool in production code
+      # Searches sdc-core/src/main and sdc-ai/src/main for any ForkJoinPool
+      # reference.  Any match is a spec violation (RNF-03, R-08 in plan.md)
+      # and fails the build.
+      # ---------------------------------------------------------------------------
+      - name: Gate — no ForkJoinPool in production code
+        run: |
+          echo "Scanning for ForkJoinPool in production sources..."
+          if grep -r "ForkJoinPool" sdc-core/src/main sdc-ai/src/main; then
+            echo "ERROR: ForkJoinPool found in production code — v1 must be single-thread."
+            exit 1
+          fi
+          echo "PASS: No ForkJoinPool found."
+
+      # Upload Surefire XML reports so the GitHub Actions test summary works.
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: "**/target/surefire-reports/*.xml"
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # Job 2 — Angular 18 unit tests (Karma + ChromeHeadless)
+  # ---------------------------------------------------------------------------
+  angular-test:
+    name: Angular 18 Unit Tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: sdc-ui
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: sdc-ui/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Angular 18 uses Karma (karma-chrome-launcher).  ChromeHeadless is the
+      # correct browser for CI environments.  If a `ci` build configuration is
+      # defined in angular.json it would be preferred; since it is not defined
+      # we pass --browsers=ChromeHeadless explicitly.
+      # Note: GitHub Actions ubuntu-latest runners include Chromium; no extra
+      # installation is needed.
+      - name: Run unit tests (ChromeHeadless, no-watch)
+        run: |
+          npx ng test \
+            --watch=false \
+            --browsers=ChromeHeadless \
+            --code-coverage=false \
+            --progress=false
+
+      - name: Upload coverage report (if generated)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: angular-coverage
+          path: sdc-ui/coverage/
+          if-no-files-found: ignore
