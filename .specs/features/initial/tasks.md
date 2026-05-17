@@ -227,6 +227,7 @@
   - `sdc-fixtures/src/test/java/com/sdc/fixtures/SegyFixtureGenerator.java`
 - **Descrição**: Criar módulo `sdc-fixtures` sem classes de produção. Implementar `SegyFixtureGenerator` que gera programaticamente arquivos SEG-Y Rev1 sintéticos: (a) arquivo mínimo válido (1 traço, format code 5); (b) arquivo médio (100 traços, format code 5); (c) arquivo com múltiplos logical files; (d) arquivos corrompidos com corrupção injetada em posições específicas (header EBCDIC, header binário, meio de arquivo). Gerar checksums SHA-256 para cada fixture válida em `src/test/resources/fixtures/checksums.sha256`. Criar script `download-reference-dataset.sh` documentando como baixar o dataset de 1,71 GB do USGS (execução opcional, não no CI padrão).
 - **Critério de verificação**: `mvn test -pl sdc-fixtures` gera todas as fixtures sintéticas e verifica os checksums em < 2 minutos; fixtures estão disponíveis no classpath de teste dos demais módulos via dependência Maven.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-011-fix
 
 ---
 
@@ -295,6 +296,7 @@
   - `sdc-rest/src/main/java/com/sdc/rest/SdcRestApplication.java`
 - **Descrição**: Criar o módulo `sdc-rest` portando todo o conteúdo de `sdc-svc` do protótipo. Renomear pacote base de `com.sdc.svc` para `com.sdc.rest`. Portar `SdcServiceApplication`, `SegyController`, `SdcViewerController`, `SdcViewerService`, `SegyCompressionService`, `SegyDtos`, `OpenApiConfig` e testes existentes. Atualizar `pom.xml` com dependências de `sdc-core` e `sdc-ai`. Configurar `application.yml` com `spring.codec.max-in-memory-size: 2147483648` (2 GB) e `sdc.bench.results.path` apontando para `sdc-bench/target/jmh-results/latest.json`.
 - **Critério de verificação**: `mvn test -pl sdc-rest` verde com todos os testes portados do protótipo; aplicação inicia sem erro via `mvn spring-boot:run -pl sdc-rest`.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-015-fix
 
 ---
 
