@@ -73,9 +73,89 @@ mvn install -pl '!sdc-ui'
 mvn install -Dskip.ui=true
 ```
 
-Para incluir o build npm no ciclo Maven (requer Node/npm disponivel no ambiente CI):
-O `sdc-ui/pom.xml` esta preparado para receber o `frontend-maven-plugin` em uma task futura (TASK-032).
+## Deploy com Docker
 
-## Deploy
+### Construir a imagem
 
-O deploy para `halotechlabs.com/demo/seismic-compressor/` sera configurado em TASK-032 via Dockerfile multi-stage + Nginx.
+```bash
+docker build -t sdc-ui sdc-ui/
+```
+
+O Dockerfile multi-stage executa dois estagios:
+1. **Stage builder** (`node:18-alpine`): instala dependencias via `npm ci` e executa `ng build --configuration=production --base-href=/demo/seismic-compressor/`. Os artefatos estaticos ficam em `/app/dist/sdc-ui/browser/`.
+2. **Stage serve** (`nginx:alpine`): copia os artefatos para `/usr/share/nginx/html/demo/seismic-compressor/` e aplica a configuracao de Nginx (`nginx.conf`).
+
+### Rodar localmente
+
+```bash
+docker run -p 80:80 sdc-ui
+```
+
+Acesse em: `http://localhost/demo/seismic-compressor/`
+
+As rotas Angular (ex: `/demo/seismic-compressor/benchmark`) carregam sem 404 porque o `nginx.conf` usa `try_files $uri $uri/ /demo/seismic-compressor/index.html`.
+
+### Configuracao de rede e proxy
+
+O `nginx.conf` define dois blocos de `location`:
+
+| Location | Comportamento |
+|---|---|
+| `/demo/seismic-compressor/` | Serve os artefatos Angular; roteamento client-side via `try_files` |
+| `/api/` | Proxy reverso para `http://sdc-rest:8080/` (container name no Docker network) |
+
+O servico `sdc-rest` deve estar acessivel pelo hostname `sdc-rest` na mesma rede Docker. Em producao, use `docker-compose` ou um overlay network:
+
+```yaml
+# docker-compose.yml (exemplo)
+services:
+  sdc-rest:
+    image: sdc-rest:latest
+    networks:
+      - sdc-net
+
+  sdc-ui:
+    image: sdc-ui:latest
+    ports:
+      - "80:80"
+    networks:
+      - sdc-net
+    depends_on:
+      - sdc-rest
+
+networks:
+  sdc-net:
+    driver: bridge
+```
+
+## Deploy em halotechlabs.com
+
+O padrao de deploy adotado no monorepo para projetos Angular (ex: `halotechlabs`, `musicianjob-frontend`, `apostas-esportivas`) e:
+
+1. **Build local da imagem Docker** no ambiente de CI ou na maquina do desenvolvedor:
+   ```bash
+   docker build -t sdc-ui:latest sdc-ui/
+   ```
+
+2. **Tag e push para o registry** (Docker Hub ou registry privado configurado em halotechlabs.com):
+   ```bash
+   docker tag sdc-ui:latest <registry>/sdc-ui:latest
+   docker push <registry>/sdc-ui:latest
+   ```
+
+3. **Pull e restart no servidor**:
+   ```bash
+   ssh user@halotechlabs.com "docker pull <registry>/sdc-ui:latest && docker compose -f /srv/sdc/docker-compose.yml up -d sdc-ui"
+   ```
+
+4. **Verificacao**: acesse `https://halotechlabs.com/demo/seismic-compressor/` e confirme que a aplicacao carrega corretamente.
+
+### Variaveis de ambiente e configuracao
+
+| Parametro | Valor em producao | Descricao |
+|---|---|---|
+| `--base-href` | `/demo/seismic-compressor/` | Prefixo de URL onde a SPA Angular e servida |
+| `proxy /api/` | `http://sdc-rest:8080/` | Container name do backend no Docker network |
+| Porta Nginx | `80` | Exposta via `EXPOSE 80` no Dockerfile |
+
+O `base-href` e fixo no momento do build (`ng build --base-href=...`) e nao pode ser alterado em runtime sem rebuildar a imagem. Para alterar o endereco do backend, edite `nginx.conf` e rebuilde a imagem.
