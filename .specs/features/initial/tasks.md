@@ -576,6 +576,7 @@
   - `sdc-ui/src/app/app.routes.ts`
 - **Descrição**: Configurar `AppComponent` com `<mat-toolbar>` exibindo o título "AI-Compress Seismic Compressor" e link para `halotechlabs.com`. Configurar roteamento: `/` → `FileInspectorComponent` + `CompressionPreviewComponent` na mesma view; `/benchmark` → página simples que consome `GET /benchmark` e exibe os resultados em tabela. Garantir responsividade básica (Mobile: breakpoint 768px) com Angular Flex Layout ou CSS Grid.
 - **Critério de verificação**: `ng build --configuration=production` conclui sem erro; as rotas `/` e `/benchmark` carregam os componentes corretos no browser.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-031
 
 ---
 
