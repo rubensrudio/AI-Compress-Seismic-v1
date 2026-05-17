@@ -1,0 +1,19 @@
+.home-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  min-height: calc(100vh - 64px); // 64px = mat-toolbar height
+  box-sizing: border-box;
+  align-items: start;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  &__inspector,
+  &__preview {
+    width: 100%;
+  }
+}
