@@ -282,6 +282,7 @@
   - `sdc-bench/README.md`
 - **Descrição**: Criar `BenchmarkReporter` que lê `target/jmh-results/latest.json`, extrai `throughput_mb_s`, `dataset_size_gb`, `compression_ratio` e `speedup_vs_prior_java_baseline`, e produz um relatório formatado (texto e JSON). Preencher `sdc-bench/README.md` com: especificação da máquina de referência (campo obrigatório — CPU modelo, RAM, tipo de storage, SO), instruções para reproduzir o benchmark, e interpretação dos resultados alvo (≥ 76,6 MB/s, speedup 148×–420×).
 - **Critério de verificação**: `BenchmarkReporter` lê `latest.json` e produz saída sem exceção; README tem seção "Hardware de Referência" preenchida com pelo menos CPU e RAM.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-014
 
 ---
 
@@ -497,6 +498,7 @@
   - `sdc-cli/src/test/java/com/sdc/cli/BenchmarkCommandTest.java`
 - **Descrição**: Criar `BenchmarkCommand` com `@Command(name = "benchmark")`. Parâmetros: `<dataset_path>` (obrigatório), `--output <report.json>` (opcional, default `./jmh-results.json`). Invoca o harness JMH de `sdc-bench` via reflection ou fork de processo (`BenchmarkReporter`), grava o relatório JSON no caminho configurado. Exit code 0 / 1.
 - **Critério de verificação**: Teste funcional com fixture sintética: relatório JSON é gerado em `--output` especificado; campos obrigatórios presentes; exit code 0.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-026
 
 ---
 
@@ -622,6 +624,7 @@
   - `.github/workflows/release.yml`
 - **Descrição**: Criar dois workflows GitHub Actions. `ci.yml` (todo push/PR): (a) `mvn verify` nos módulos `sdc-core`, `sdc-ai`, `sdc-rest`, `sdc-cli`, `sdc-fixtures` com JDK 17; (b) `ng test --watch=false` em `sdc-ui`; (c) gate de corretude: falha se `SdcRoundTripTest` falhar; (d) verificação de ausência de `ForkJoinPool` no código de produção (`grep -r ForkJoinPool sdc-core/src/main sdc-ai/src/main` deve retornar vazio). `release.yml` (push em tag `v*`): (a) executa `ci.yml`; (b) executa `mvn verify -pl sdc-bench` para gerar `latest.json`; (c) publica `latest.json` como release asset; (d) build e push Docker de `sdc-ui` para halotechlabs.com via secret `HALOTECHLABS_DEPLOY_KEY`.
 - **Critério de verificação**: Push de PR aciona `ci.yml` e bloqueia merge se qualquer teste falhar; push de tag `v1.0.0` aciona `release.yml` e publica `latest.json` como release asset.
+- **Status**: ⛔ BLOQUEADA_NEEDS_HUMAN — motivo: 2 rodadas reviewer reprovadas; pendente: (1) step known_hosts para SSH no job docker do release.yml; (2) docker context create idempotente (`docker context rm remote 2>/dev/null || true` antes do create). Branch: feature/initial-TASK-033
 
 ---
 
@@ -639,6 +642,7 @@
   - `sdc-ai/README.md`
 - **Descrição**: Treinar ou obter o SavedModel do autoencoder (arquitetura encoder-decoder em Python/Keras sobre dados SEG-Y sintéticos). Exportar como TensorFlow SavedModel para o diretório `src/main/resources/models/<uuid>/`. Gerar o UUID do artefato e atualizar `ModelRegistry.BUNDLED_MODEL_UUID`. Documentar no `sdc-ai/README.md`: arquitetura do modelo (camadas, dimensões), dados de treinamento utilizados, métricas de compressibilidade dos resíduos (ratio de DEFLATE sobre resíduos < ratio sobre amostras brutas), e o processo completo de re-treinamento (SDC-06). Se o modelo real ainda não estiver disponível, usar o stub de identidade da TASK-010 como placeholder marcado com comentário `// PLACEHOLDER: substituir pelo modelo treinado antes de release`.
 - **Critério de verificação**: `AePredictorTest` carrega o artefato sem erro em ambiente limpo; `TAC-03` — DEFLATE sobre resíduos produz ratio menor que DEFLATE sobre amostras brutas (para o modelo real); para o stub de identidade, documentar que o critério TAC-03 é pendente.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-034
 
 ---
 
