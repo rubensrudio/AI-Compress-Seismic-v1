@@ -92,11 +92,12 @@ jobs:
             fi
             echo "PASS: SdcRoundTripTest passed."
           else
-            echo "WARNING: SdcRoundTripTest report not found at ${REPORT_FILE}."
+            echo "ERROR: SdcRoundTripTest report not found at ${REPORT_FILE}."
             echo "Listing available reports:"
             ls "${REPORT_DIR}" 2>/dev/null || echo "(directory empty or missing)"
-            # Do not fail if the report is simply absent (test may have been
-            # skipped on this run).  The mvn verify above already enforces it.
+            # Fail explicitly: an absent report means the test never ran, which
+            # is itself a correctness violation (RNF-02, RNF-08 in spec.md).
+            exit 1
           fi
 
       # ---------------------------------------------------------------------------
