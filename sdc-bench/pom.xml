@@ -20,6 +20,8 @@
       <artifactId>jmh-core</artifactId>
     </dependency>
 
+    <!-- JMH annotation processor: must be in annotationProcessorPaths AND as
+         a compile-scope dep so the generated benchmark stubs are compiled. -->
     <dependency>
       <groupId>org.openjdk.jmh</groupId>
       <artifactId>jmh-generator-annprocess</artifactId>
@@ -37,12 +39,6 @@
     </dependency>
 
     <dependency>
-      <groupId>com.sdc</groupId>
-      <artifactId>sdc-fixtures</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
@@ -52,7 +48,32 @@
 
   <build>
     <plugins>
-      <!-- JMH uber-JAR required for benchmark execution -->
+
+      <!-- ===================================================================
+           maven-compiler-plugin: wire up the JMH annotation processor so that
+           @Benchmark method stubs are generated at compile time.
+           =================================================================== -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <release>${java.version}</release>
+          <encoding>${project.build.sourceEncoding}</encoding>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.openjdk.jmh</groupId>
+              <artifactId>jmh-generator-annprocess</artifactId>
+              <version>${jmh.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <!-- ===================================================================
+           maven-assembly-plugin: produce the JMH uber-JAR.
+           The uber-JAR is needed for standalone execution and is the artifact
+           invoked by maven-exec-plugin below.
+           =================================================================== -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-assembly-plugin</artifactId>
@@ -76,6 +97,81 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- ===================================================================
+           maven-antrun-plugin: create the jmh-results directory before
+           the exec-maven-plugin tries to write latest.json into it.
+           JMH CLI does not create parent directories automatically.
+           =================================================================== -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>create-jmh-results-dir</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <mkdir dir="${project.build.directory}/jmh-results"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- ===================================================================
+           exec-maven-plugin: run the JMH uber-JAR during integration-test.
+           Using exec:exec (not exec:java) so that JMH's @Fork(1) can spawn
+           a child JVM that has the full uber-JAR on its classpath, which is
+           required by org.openjdk.jmh.runner.ForkedMain.
+           The uber-JAR is produced by maven-assembly-plugin in the package
+           phase (which runs before integration-test in mvn verify).
+           =================================================================== -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>run-jmh-benchmarks</id>
+            <phase>integration-test</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>${java.home}/bin/java</executable>
+              <arguments>
+                <argument>-jar</argument>
+                <argument>${project.build.directory}/${project.artifactId}-${project.version}-jar-with-dependencies.jar</argument>
+                <argument>-f</argument>
+                <argument>1</argument>
+                <argument>-wi</argument>
+                <argument>1</argument>
+                <argument>-w</argument>
+                <argument>1s</argument>
+                <argument>-i</argument>
+                <argument>2</argument>
+                <argument>-r</argument>
+                <argument>2s</argument>
+                <argument>-bm</argument>
+                <argument>thrpt</argument>
+                <argument>-tu</argument>
+                <argument>s</argument>
+                <argument>-rf</argument>
+                <argument>json</argument>
+                <argument>-rff</argument>
+                <argument>${project.build.directory}/jmh-results/latest.json</argument>
+                <argument>SdcEncodeBenchmark|SdcDecodeBenchmark</argument>
+              </arguments>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 
