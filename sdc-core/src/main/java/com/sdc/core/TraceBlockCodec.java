@@ -186,6 +186,12 @@ public final class TraceBlockCodec {
         short[] q = bytesToShorts(rawBytes, cb.samplesPerTrace());
 
         // 3) dequantização linear
+        // TODO (TASK-XX — codec bit-mismatch bug): LinearQuantizer.decode(short[]) always assumes
+        // 16 bits regardless of the effectiveBits used during encode. This causes silent data
+        // corruption when any profile other than HIGH_QUALITY (16 bits) is used for compression.
+        // Fix: store quantizationBits inside CompressedTraceBlock (and in the SDC container
+        // serialisation) and call LinearQuantizer.decode(q, cb.quantizationBits()) here.
+        // Until fixed, callers must ensure encode and decode both use 16-bit profiles (HIGH_QUALITY).
         float[] dequantized = LinearQuantizer.decode(q);
 
         // 4) slot de resíduos AI — predictor.decode() na posição simétrica
