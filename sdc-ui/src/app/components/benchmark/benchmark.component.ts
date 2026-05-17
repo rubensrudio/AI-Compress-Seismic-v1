@@ -8,6 +8,7 @@ import { CommonModule } from '@angular/common';
 import { MatTableModule } from '@angular/material/table';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { SdcApiService } from '../../services/sdc-api.service';
 import { BenchmarkResponse } from '../../models/sdc.models';
@@ -27,6 +28,7 @@ type BenchmarkState = 'loading' | 'success' | 'error';
     MatTableModule,
     MatCardModule,
     MatProgressBarModule,
+    MatButtonModule,
     MatIconModule,
   ],
   templateUrl: './benchmark.component.html',
