@@ -52,13 +52,17 @@
     <exec-maven-plugin.version>3.3.0</exec-maven-plugin.version>
   </properties>
 
+  <!-- sdc-fixtures is intentionally excluded from the reactor.
+       It has a circular dependency with sdc-core (sdc-core tests depend on
+       sdc-fixtures; sdc-fixtures depends on sdc-core to generate fixtures).
+       Install it once in isolation before running the rest:
+           cd sdc-fixtures && mvn install -DskipTests && cd ..  -->
   <modules>
     <module>sdc-core</module>
     <module>sdc-ai</module>
     <module>sdc-rest</module>
     <module>sdc-cli</module>
     <module>sdc-bench</module>
-    <module>sdc-fixtures</module>
     <!-- sdc-ui is an Angular 18 project built separately via Node/npm.
          It is listed here as an optional module using the frontend-maven-plugin.
          To skip the UI build: mvn install -pl '!sdc-ui' or use -Dskip.ui=true -->
@@ -271,7 +275,7 @@
         <module>sdc-rest</module>
         <module>sdc-cli</module>
         <module>sdc-bench</module>
-        <module>sdc-fixtures</module>
+        <!-- sdc-fixtures excluded: circular dependency, install separately -->
         <!-- sdc-ui excluded -->
       </modules>
     </profile>
