@@ -504,6 +504,7 @@
   - `sdc-ui/angular.json`
 - **Descrição**: Criar o projeto Angular 18 em `sdc-ui/` via `ng new sdc-ui --routing --style=scss --standalone`. Adicionar Angular Material (`ng add @angular/material`) com tema consistente com `halotechlabs` e `musicianjob-frontend` do monorepo. Configurar `proxy.conf.json` para redirecionar chamadas `/api` para `http://localhost:8080` em desenvolvimento. Configurar `environment.ts` e `environment.prod.ts` com a URL da API REST. Adicionar `sdc-ui` como módulo no parent POM com `frontend-maven-plugin` ou instruções de build separadas no README.
 - **Critério de verificação**: `npm install && ng serve` inicia sem erro em `sdc-ui/`; página em branco carrega no browser sem erros no console.
+- **Status**: ✅ APROVADA_AGUARDANDO_SMOKE em 2026-05-16 — branch: feature/initial-TASK-027
 
 ---
 
