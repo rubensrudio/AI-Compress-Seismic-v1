@@ -594,6 +594,7 @@
   - `sdc-ui/Dockerfile`
 - **Descrição**: Criar `Dockerfile` multi-stage para `sdc-ui`: stage 1 (Node 18) executa `ng build --configuration=production --base-href=/demo/seismic-compressor/`; stage 2 (Nginx Alpine) serve os artefatos estáticos. Criar `nginx.conf` com: `root /usr/share/nginx/html`; `try_files $uri $uri/ /index.html` para suporte a roteamento Angular; proxy reverso para `/api` → `sdc-rest:8080`. Documentar no README do módulo o processo de deploy no servidor halotechlabs.com (mapeando o pipeline existente de outros projetos Angular do monorepo).
 - **Critério de verificação**: `docker build -t sdc-ui sdc-ui/` conclui sem erro; `docker run -p 80:80 sdc-ui` serve a aplicação em `localhost/demo/seismic-compressor/`; rota `/benchmark` carrega sem 404.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-032
 
 ---
 
