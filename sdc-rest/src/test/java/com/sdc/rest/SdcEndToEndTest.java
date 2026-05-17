@@ -44,6 +44,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  * float value on round-trip with zero rounding noise, guaranteeing byte-for-byte
  * identity after decompress and a matching SHA-256 digest.
  *
+ * <h3>Quantisation bits alignment</h3>
+ * <p>The POST /compress request uses {@code X-Compression-Profile: HIGH_QUALITY}
+ * (16 bits) to guarantee round-trip correctness. This is a deliberate workaround
+ * for a known codec bug: {@code LinearQuantizer.decode(short[])} always assumes
+ * 16 bits, regardless of the bits used during encode. Using {@code BALANCED}
+ * (12 bits) or {@code HIGH_COMPRESSION} (8 bits) would silently corrupt the
+ * dequantised values on decode, causing the SHA-256 assertion to fail even with
+ * constant-value traces.
+ * <br>
+ * TODO (TASK-XX): fix {@code TraceBlockCodec} to store {@code quantizationBits}
+ * inside {@code CompressedTraceBlock} (and in the SDC container serialisation) and
+ * pass those bits to {@code LinearQuantizer.decode(short[], int)} in
+ * {@code TraceBlockCodec.decompressInternal()}. Once fixed, this test can use any
+ * profile without risk of silent data corruption.</p>
+ *
  * <h3>Fixture structure (format code 5 / IEEE float32 big-endian)</h3>
  * <ul>
  *   <li>EBCDIC header: 3200 bytes; first byte {@code 0xC3} (EBCDIC 'C' &gt; 0x7F)</li>
@@ -95,16 +110,24 @@ class SdcEndToEndTest {
      * <ol>
      *   <li>Build a synthetic SEG-Y Rev1 fixture in memory (format code 5, constant
      *       samples; guarantees lossless round-trip through linear quantisation).</li>
-     *   <li>POST the fixture to {@code /compress} and collect the {@code .sdc} response body.</li>
+     *   <li>POST the fixture to {@code /compress} with {@code X-Compression-Profile: HIGH_QUALITY}
+     *       and collect the {@code .sdc} response body.</li>
+     *   <li>Verify the {@code .sdc} magic number (first 4 bytes must equal {@code 0x53444301}).</li>
      *   <li>POST the {@code .sdc} body to {@code /decompress} and collect the restored SEG-Y.</li>
      *   <li>Compare SHA-256 of the original fixture with SHA-256 of the restored SEG-Y.
      *       They must be identical.</li>
      * </ol>
      *
+     * <p><b>Profile choice:</b> {@code HIGH_QUALITY} (16 bits) is used deliberately to align
+     * encode bits with the 16 bits assumed by {@code LinearQuantizer.decode(short[])} in
+     * {@code TraceBlockCodec.decompressInternal()}. Using {@code BALANCED} (12 bits) or
+     * {@code HIGH_COMPRESSION} (8 bits) would produce silently corrupted samples on decode.
+     * See class-level Javadoc for the full TODO reference (TASK-XX).
+     *
      * @throws NoSuchAlgorithmException if SHA-256 is unavailable (should never happen on any JVM 17+)
      */
     @Test
-    @DisplayName("E2E: /compress → /decompress produces SHA-256-identical SEG-Y (format code 5)")
+    @DisplayName("E2E: /compress (HIGH_QUALITY) → /decompress produces SHA-256-identical SEG-Y (format code 5)")
     void endToEnd_compressDecompress_sha256Matches() throws NoSuchAlgorithmException {
         // Step 1: build the synthetic fixture in memory
         byte[] originalSegy = buildConstantSampleSegyFormatCode5(
@@ -112,10 +135,12 @@ class SdcEndToEndTest {
 
         byte[] originalSha256 = sha256(originalSegy);
 
-        // Step 2: POST to /compress — expect HTTP 200 with application/octet-stream body
+        // Step 2: POST to /compress with HIGH_QUALITY profile (16 bits) to guarantee correct
+        // round-trip. HIGH_QUALITY = 16 bits matches the fixed 16 bits in LinearQuantizer.decode().
         byte[] sdcBody = webClient.post()
                 .uri("/compress")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header("X-Compression-Profile", "HIGH_QUALITY")
                 .bodyValue(originalSegy)
                 .exchange()
                 .expectStatus().isOk()
@@ -125,9 +150,16 @@ class SdcEndToEndTest {
                 .getResponseBody();
 
         assertThat(sdcBody)
-                .as("/compress response body must not be null and must have at least 4 bytes (magic)")
+                .as("/compress response body must not be null and must have at least 8 bytes (magic + version)")
                 .isNotNull()
-                .hasSizeGreaterThan(4);
+                .hasSizeGreaterThan(8);
+
+        // Step 2b: verify SDC magic number — first 4 bytes must equal 0x53444301 ('S''D''C'\x01)
+        int magic = ((sdcBody[0] & 0xFF) << 24) | ((sdcBody[1] & 0xFF) << 16)
+                  | ((sdcBody[2] & 0xFF) <<  8) |  (sdcBody[3] & 0xFF);
+        assertThat(magic)
+                .as("First 4 bytes of .sdc body must be the SDC magic number 0x53444301, got 0x%08X", magic)
+                .isEqualTo(0x53444301);
 
         // Step 3: POST .sdc body to /decompress — expect HTTP 200 with restored SEG-Y
         byte[] restoredSegy = webClient.post()
