@@ -37,6 +37,22 @@
       <scope>test</scope>
     </dependency>
 
+    <!--
+      TASK-012: fixtures sintéticas geradas pelo SegyFixtureGenerator (sdc-fixtures).
+      O test-jar (classifier=tests) expõe /fixtures/*.segy e /fixtures/checksums.sha256
+      no classpath de teste deste módulo.
+      Requer mvn test -pl sdc-fixtures (ou mvn install -pl sdc-fixtures) antes de
+      executar os testes deste módulo.
+    -->
+    <dependency>
+      <groupId>com.sdc</groupId>
+      <artifactId>sdc-fixtures</artifactId>
+      <version>${project.version}</version>
+      <classifier>tests</classifier>
+      <type>jar</type>
+      <scope>test</scope>
+    </dependency>
+
   </dependencies>
 
 </project>
