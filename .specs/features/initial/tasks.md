@@ -558,6 +558,7 @@
   - `sdc-ui/src/app/components/compression-preview/compression-preview.component.html`
 - **Descrição**: Criar `CompressionPreviewComponent` que, após o upload do arquivo no `FileInspectorComponent`, exibe: tamanho original do arquivo, estimativa de ratio de compressão (obtida do `GET /benchmark` como `compression_ratio`), botão "Comprimir" que aciona `SdcApiService.compress()` e faz download do arquivo `.sdc` resultante. Exibir progresso via `mat-progress-bar`. Exibir ratio real calculado após compressão (tamanho original / tamanho do `.sdc`).
 - **Critério de verificação**: Componente exibe ratio estimado após upload; clique em "Comprimir" dispara POST e o browser baixa o arquivo `.sdc`; feedback visual de progresso aparece durante a requisição.
+- **Status**: ✅ APROVADA_AGUARDANDO_SMOKE em 2026-05-16 — branch: feature/initial-TASK-030
 
 ---
 
