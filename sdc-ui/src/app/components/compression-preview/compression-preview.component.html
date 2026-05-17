@@ -1,0 +1,139 @@
+<mat-card class="preview-card" aria-label="Compression Preview">
+  <mat-card-header>
+    <mat-card-title>Compression Preview</mat-card-title>
+    <mat-card-subtitle>
+      Review compression estimate and download the compressed file
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+
+    <!-- Idle: no file loaded yet -->
+    @if (state() === 'idle') {
+      <div class="empty-state" role="status" aria-live="polite">
+        <mat-icon class="empty-state__icon" aria-hidden="true">compress</mat-icon>
+        <p class="empty-state__text">
+          Upload a SEG-Y file in the inspector above to see compression details.
+        </p>
+      </div>
+    }
+
+    <!-- Loading benchmark -->
+    @if (state() === 'loading-benchmark') {
+      <div class="status-area" role="status" aria-live="polite" aria-label="Loading benchmark data...">
+        <mat-progress-bar
+          mode="indeterminate"
+          aria-label="Loading benchmark estimate">
+        </mat-progress-bar>
+        <p class="status-text">Loading benchmark estimate&hellip;</p>
+      </div>
+    }
+
+    <!-- Ready / Compressing / Done / Error — file info panel -->
+    @if (state() === 'ready' || state() === 'compressing' || state() === 'done' || state() === 'error') {
+      <div class="file-info" aria-label="File information">
+
+        <!-- File name -->
+        <div class="info-row">
+          <mat-icon class="info-row__icon" aria-hidden="true">insert_drive_file</mat-icon>
+          <span class="info-row__label">File</span>
+          <span class="info-row__value" aria-label="File name">{{ file?.name ?? '—' }}</span>
+        </div>
+
+        <!-- Original size -->
+        <div class="info-row">
+          <mat-icon class="info-row__icon" aria-hidden="true">data_usage</mat-icon>
+          <span class="info-row__label">Original size</span>
+          <span class="info-row__value" aria-label="Original file size">
+            {{ fileSizeLabel() ?? '—' }}
+          </span>
+        </div>
+
+        <!-- Estimated ratio -->
+        <div class="info-row">
+          <mat-icon class="info-row__icon" aria-hidden="true">trending_down</mat-icon>
+          <span class="info-row__label">Estimated ratio</span>
+          <span
+            class="info-row__value info-row__value--highlight"
+            aria-label="Estimated compression ratio">
+            {{ estimatedRatioLabel() ?? '—' }}
+          </span>
+        </div>
+
+        <!-- Real ratio (shown after done) -->
+        @if (state() === 'done' && realRatioLabel() !== null) {
+          <div class="info-row info-row--success">
+            <mat-icon class="info-row__icon" aria-hidden="true">verified</mat-icon>
+            <span class="info-row__label">Actual ratio</span>
+            <span
+              class="info-row__value info-row__value--success"
+              aria-label="Actual compression ratio achieved">
+              {{ realRatioLabel() }}
+            </span>
+          </div>
+        }
+
+      </div>
+
+      <!-- Progress bar for compressing state -->
+      @if (state() === 'compressing') {
+        <div class="status-area" role="status" aria-live="polite" aria-label="Compression in progress...">
+          <mat-progress-bar
+            mode="indeterminate"
+            aria-label="Compression progress">
+          </mat-progress-bar>
+          <p class="status-text">Compressing&hellip; please wait</p>
+        </div>
+      }
+
+      <!-- Error banner -->
+      @if (state() === 'error') {
+        <div class="error-banner" role="alert" aria-live="assertive">
+          <mat-icon class="error-banner__icon" aria-hidden="true">error_outline</mat-icon>
+          <p class="error-banner__text">{{ errorMessage() }}</p>
+        </div>
+      }
+
+      <!-- Success banner -->
+      @if (state() === 'done') {
+        <div class="success-banner" role="status" aria-live="polite">
+          <mat-icon class="success-banner__icon" aria-hidden="true">check_circle</mat-icon>
+          <p class="success-banner__text">
+            Compression complete. The <strong>.sdc</strong> file download has started.
+          </p>
+        </div>
+      }
+
+      <!-- Action buttons -->
+      <div class="action-row">
+
+        <!-- Compress button -->
+        @if (state() === 'ready' || state() === 'error') {
+          <button
+            mat-raised-button
+            color="primary"
+            [disabled]="!file || state() === 'compressing'"
+            (click)="compress()"
+            aria-label="Start compression and download the .sdc file">
+            <mat-icon aria-hidden="true">compress</mat-icon>
+            Compress
+          </button>
+        }
+
+        <!-- Compress again after done -->
+        @if (state() === 'done') {
+          <button
+            mat-stroked-button
+            color="primary"
+            (click)="compress()"
+            aria-label="Compress again and re-download the .sdc file">
+            <mat-icon aria-hidden="true">refresh</mat-icon>
+            Compress Again
+          </button>
+        }
+
+      </div>
+    }
+
+  </mat-card-content>
+</mat-card>
