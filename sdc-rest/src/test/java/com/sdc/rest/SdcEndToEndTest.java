@@ -30,11 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       with {@code {"status":"UP"}} after application startup.</li>
  *   <li>{@code benchmark_returnsJsonWithRequiredFields()} — GET /benchmark
  *       returns JSON containing at least {@code throughput_mb_s} and
- *       {@code compression_ratio}.
- *       <br><b>TODO (TASK-017):</b> BenchmarkController is not yet implemented.
- *       This test is skipped until TASK-017 is merged into the integration branch.
- *       Re-enable by removing the {@code @org.junit.jupiter.api.Disabled} annotation
- *       once BenchmarkController exists at GET /benchmark.</li>
+ *       {@code compression_ratio} (key presence verified regardless of null value).</li>
  * </ol>
  *
  * <h3>Fixture strategy</h3>
@@ -219,22 +215,29 @@ class SdcEndToEndTest {
      * Verifies that GET /benchmark returns HTTP 200 with a JSON payload containing
      * at least {@code throughput_mb_s} and {@code compression_ratio}.
      *
-     * <p><b>TODO (TASK-017):</b> {@code BenchmarkController} is not yet implemented.
-     * This test is disabled until TASK-017 is merged into the integration branch.
-     * Remove the {@link org.junit.jupiter.api.Disabled} annotation to re-enable it.
+     * <p>Uses String-body contains checks instead of {@code jsonPath().exists()} because
+     * WebTestClient's {@code .exists()} returns false for keys whose value is JSON null
+     * (e.g. {@code compression_ratio} when no JMH file is configured). The String check
+     * verifies key presence regardless of value.
      */
-    @org.junit.jupiter.api.Disabled("TODO TASK-017: BenchmarkController not implemented yet — re-enable after merge")
     @Test
     @DisplayName("GET /benchmark returns JSON with throughput_mb_s and compression_ratio")
     void benchmark_returnsJsonWithRequiredFields() {
-        webClient.get()
+        String body = webClient.get()
                 .uri("/benchmark")
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
-                .expectBody()
-                .jsonPath("$.throughput_mb_s").exists()
-                .jsonPath("$.compression_ratio").exists();
+                .expectBody(String.class)
+                .returnResult()
+                .getResponseBody();
+
+        assertThat(body)
+                .as("GET /benchmark response must contain key throughput_mb_s")
+                .contains("\"throughput_mb_s\"");
+        assertThat(body)
+                .as("GET /benchmark response must contain key compression_ratio")
+                .contains("\"compression_ratio\"");
     }
 
     // -------------------------------------------------------------------------
