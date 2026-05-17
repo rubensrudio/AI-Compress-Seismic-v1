@@ -1,0 +1,67 @@
+<div class="benchmark-page">
+  <mat-card class="benchmark-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon aria-hidden="true">speed</mat-icon>
+        Benchmark Results
+      </mat-card-title>
+      <mat-card-subtitle>
+        Latest JMH benchmark report from the seismic compression pipeline
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Loading state -->
+      @if (state() === 'loading') {
+        <mat-progress-bar
+          mode="indeterminate"
+          aria-label="Loading benchmark data"
+          class="benchmark-progress">
+        </mat-progress-bar>
+        <p class="benchmark-loading-text" role="status" aria-live="polite">
+          Loading benchmark data...
+        </p>
+      }
+
+      <!-- Error state -->
+      @if (state() === 'error') {
+        <div class="benchmark-error" role="alert" aria-live="assertive">
+          <mat-icon color="warn" aria-hidden="true">error_outline</mat-icon>
+          <p class="benchmark-error__message">{{ errorMessage() }}</p>
+          <button
+            mat-stroked-button
+            color="primary"
+            (click)="retry()"
+            aria-label="Retry loading benchmark data">
+            <mat-icon aria-hidden="true">refresh</mat-icon>
+            Retry
+          </button>
+        </div>
+      }
+
+      <!-- Success state -->
+      @if (state() === 'success') {
+        <mat-table [dataSource]="rows()" class="benchmark-table" aria-label="Benchmark results table">
+          <!-- Field column -->
+          <ng-container matColumnDef="field">
+            <mat-header-cell *matHeaderCellDef scope="col">Metric</mat-header-cell>
+            <mat-cell *matCellDef="let row">{{ row.field }}</mat-cell>
+          </ng-container>
+
+          <!-- Value column -->
+          <ng-container matColumnDef="value">
+            <mat-header-cell *matHeaderCellDef scope="col">Value</mat-header-cell>
+            <mat-cell *matCellDef="let row" class="benchmark-table__value">{{ row.value }}</mat-cell>
+          </ng-container>
+
+          <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+          <mat-row *matRowDef="let row; columns: displayedColumns;"></mat-row>
+        </mat-table>
+
+        @if (rows().length === 0) {
+          <p class="benchmark-empty" role="status">No benchmark data available.</p>
+        }
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
