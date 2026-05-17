@@ -38,12 +38,13 @@
       <artifactId>sdc-ai</artifactId>
     </dependency>
 
-    <!-- Jackson: used by BenchmarkReporter to serialise JMH results to
-         latest.json.  Version managed by the parent BOM — no explicit version
-         here so the BOM remains the single source of truth. -->
+    <!-- Jackson Databind: required by BenchmarkReporter to parse latest.json.
+         Version aligned with Spring Boot 3.3.5 BOM (2.17.2); explicit here
+         because sdc-bench does not inherit from spring-boot-dependencies. -->
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
+      <version>2.17.2</version>
     </dependency>
 
     <dependency>
