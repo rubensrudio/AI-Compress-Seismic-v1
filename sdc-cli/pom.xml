@@ -31,6 +31,20 @@
     </dependency>
 
     <dependency>
+      <groupId>com.sdc</groupId>
+      <artifactId>sdc-bench</artifactId>
+    </dependency>
+
+    <!-- Jackson is used transitively by BenchmarkReporter (sdc-bench).
+         Declared explicitly here so the compile and runtime classpath of
+         sdc-cli is self-contained without relying on implicit transitive
+         resolution from sdc-bench's build context. -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <scope>test</scope>
