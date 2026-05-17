@@ -200,11 +200,28 @@ jobs:
           # Required secret: SSH private key authorised for deploy@halotechlabs.com
           ssh-private-key: ${{ secrets.HALOTECHLABS_DEPLOY_KEY }}
 
+      # Step 1b: Add halotechlabs.com to known_hosts before any SSH connection.
+      # Without this, ssh strict host-key checking fails with
+      # "Host key verification failed" on a fresh runner and the docker context
+      # create / docker manifest inspect steps never reach the host.
+      # HALOTECHLABS_KNOWN_HOST must contain the full known_hosts line, e.g.:
+      #   halotechlabs.com ssh-ed25519 AAAA...
+      # Obtain it with: ssh-keyscan halotechlabs.com
+      - name: Configure SSH known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HALOTECHLABS_KNOWN_HOST }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
       # Step 2: Create a Docker context that routes the Docker daemon API over
       # SSH.  This avoids registry password authentication entirely — the SSH
       # key loaded above authenticates the tunnel.
+      # `docker context rm remote || true` makes the step idempotent: if the
+      # context already exists from a previous run on the same runner, the create
+      # does not fail with "context already exists".
       - name: Create remote Docker context via SSH
         run: |
+          docker context rm remote 2>/dev/null || true
           docker context create remote \
             --docker "host=ssh://deploy@halotechlabs.com"
 
