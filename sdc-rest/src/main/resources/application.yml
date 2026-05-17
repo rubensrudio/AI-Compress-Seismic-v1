@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: sdc-rest
+  codec:
+    # Maximum in-memory size: 2 GB — required for large SEG-Y files (see TASK-015).
+    # Documented limit: files larger than 2 GB must be streamed via CLI.
+    max-in-memory-size: 2147483648
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
+sdc:
+  bench:
+    results:
+      # Caminho relativo à raiz do monorepo. Requer execução via
+      # `mvn spring-boot:run -pl sdc-rest` a partir do diretório raiz.
+      # Para execução fora do monorepo, sobrescreva via variável de ambiente:
+      # SDC_BENCH_RESULTS_PATH=/absolute/path/to/latest.json
+      path: sdc-bench/target/jmh-results/latest.json
+  viewer:
+    # Número de blocos 3D decomprimidos a manter em cache LRU.
+    # Cada bloco pode ter tamanho variável; ex: 8x8x1000 float = 256KB por bloco, 64 blocos = 16MB.
+    cache-blocks: 64
+  data:
+    # Root directory scanned by /api/viewer/files and /api/viewer/sgy-files.
+    # Blank = return empty list (UI falls back to manual input).
+    root:
