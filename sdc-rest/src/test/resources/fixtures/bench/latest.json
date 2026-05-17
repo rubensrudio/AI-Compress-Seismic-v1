@@ -1,0 +1,12 @@
+[
+  {
+    "benchmark": "com.sdc.bench.SdcEncodeBenchmark.encodeFullPipeline",
+    "mode": "thrpt",
+    "primaryMetric": { "score": 464.087, "scoreUnit": "ops/s" }
+  },
+  {
+    "benchmark": "com.sdc.bench.SdcDecodeBenchmark.decodeFullPipeline",
+    "mode": "thrpt",
+    "primaryMetric": { "score": 1005.765, "scoreUnit": "ops/s" }
+  }
+]
