@@ -174,6 +174,7 @@
   - `sdc-ai/src/main/java/com/sdc/ai/AeRuntime.java`
 - **Descrição**: Criar o módulo `sdc-ai` com `pom.xml` declarando dependências `tensorflow-core-platform:0.5.0` e `tensorflow-framework:0.5.0`. Portar `AeRuntime.java` existente do protótipo como ponto de partida. Configurar o módulo para empacotar os binários nativos TF Java via classificadores Maven (plataforma Linux x86_64 obrigatória para CI; Windows e macOS como best-effort). Documentar versão TF Java 0.5.0 no `sdc-ai/README.md`.
 - **Critério de verificação**: `mvn compile -pl sdc-ai` conclui sem erro; `AeRuntime` compila com as dependências TF Java resolvidas.
+- **Status**: ✅ APROVADA em 2026-05-16 — branch: feature/initial-TASK-008
 
 ---
 
@@ -245,6 +246,7 @@
   - `sdc-core/pom.xml`
 - **Descrição**: Estender `SdcRoundTripTest` para iterar sobre todas as fixtures sintéticas válidas geradas pelo `SegyFixtureGenerator`. Para cada fixture, executar o pipeline completo encode → decode usando `SegyCompression` com `TracePredictor.identity()` e comparar o SHA-256 do arquivo de saída com o checksum da fixture. Adicionar dependência `sdc-fixtures` como `test` scope no `pom.xml` do `sdc-core`. Garantir execução em < 5 minutos.
 - **Critério de verificação**: `mvn test -pl sdc-core` com todos os testes verdes; `SdcRoundTripTest` comprova corretude bit-a-bit para format code 5 em todas as fixtures sintéticas.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-012
 
 ---
 
@@ -262,6 +264,7 @@
   - `sdc-bench/src/main/java/com/sdc/bench/SdcEncodeBenchmark.java`
 - **Descrição**: Criar módulo `sdc-bench` com dependências `jmh-core:1.37` e `jmh-generator-annprocess:1.37`. Implementar `SdcEncodeBenchmark` com método `@Benchmark` que executa encode completo sobre o dataset de referência (usando fixture sintética média como proxy no CI). Implementar `SdcDecodeBenchmark` analogamente. Configurar `@BenchmarkMode(Mode.Throughput)` e `@OutputTimeUnit(TimeUnit.SECONDS)`. O resultado é gravado em `target/jmh-results/latest.json` via `ResultFormatType.JSON`.
 - **Critério de verificação**: `mvn verify -pl sdc-bench` executa o harness JMH e gera `target/jmh-results/latest.json` com campos `primaryMetric.score` e `primaryMetric.scoreUnit` presentes.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-013
 
 ---
 
@@ -314,6 +317,7 @@
   - `sdc-rest/src/test/java/com/sdc/rest/HealthControllerTest.java`
 - **Descrição**: Criar `HealthController` com `@GetMapping("/health")`. Resposta 200: `{"status": "UP", "codec": "OK", "model": "<uuid>"}` quando o `AePredictor` carrega sem erro. Resposta 503: `{"status": "DOWN", "reason": "<motivo>"}` quando o modelo não está disponível (propagado via `ApplicationContext` ou bean de status). Teste de unidade com `@WebFluxTest` verifica os dois cenários.
 - **Critério de verificação**: `HealthControllerTest` verifica HTTP 200 com payload correto quando modelo disponível; verifica HTTP 503 quando modelo ausente; `mvn test -pl sdc-rest` verde.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-016
 
 ---
 
@@ -331,6 +335,7 @@
   - `sdc-rest/src/main/java/com/sdc/rest/BenchmarkResultStore.java`
 - **Descrição**: Criar `BenchmarkResultStore` que lê `sdc.bench.results.path` no startup. Se o arquivo não existir, todos os campos numéricos são `null`. Criar `BenchmarkController` com `@GetMapping("/benchmark")` que serve o payload JSON: `throughput_mb_s`, `dataset_size_gb`, `compression_ratio`, `speedup_vs_prior_java_baseline`, `timestamp`, `version`, `reference_hardware`. Teste de integração com arquivo `latest.json` de fixture.
 - **Critério de verificação**: `GET /benchmark` retorna HTTP 200 com JSON válido contendo todos os campos obrigatórios (mesmo que `null`); quando `latest.json` existe, os valores são lidos corretamente.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-017
 
 ---
 
@@ -348,6 +353,7 @@
   - `sdc-rest/src/test/java/com/sdc/rest/CompressStreamControllerTest.java`
 - **Descrição**: Criar `CompressStreamController` com `@PostMapping("/compress")` que aceita `Content-Type: application/octet-stream`. Usar `DataBufferUtils.join()` para agregar o Flux de DataBuffers em `byte[]`. Salvar em arquivo temporário, executar `SegyValidator` (retorna 400 em falha com JSON de erro), executar `SegyCompression.compress()` com `AePredictor`, retornar o arquivo `.sdc` como `Flux<DataBuffer>`. Suportar header opcional `X-Compression-Profile`. Retornar HTTP 500 em falha interna. Documentar o limite de 2 GB no Javadoc e no `application.yml`.
 - **Critério de verificação**: Teste de integração com fixture sintética (format code 5): POST retorna HTTP 200 com body `.sdc` decodificável; POST com payload inválido retorna HTTP 400 com JSON de erro; `mvn test -pl sdc-rest` verde.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-018
 
 ---
 
@@ -365,6 +371,7 @@
   - `sdc-rest/src/test/java/com/sdc/rest/DecompressStreamControllerTest.java`
 - **Descrição**: Criar `DecompressStreamController` com `@PostMapping("/decompress")` que aceita `Content-Type: application/octet-stream` (arquivo `.sdc`). Validar magic number e versão do container (retorna 400 se inválido). Executar `SegyCompression.decompress()` com `AePredictor`. Retornar o SEG-Y restaurado como `Flux<DataBuffer>`. Teste de integração verifica que o arquivo retornado é byte-a-byte idêntico ao original (para format code 5).
 - **Critério de verificação**: Teste de integração: POST com arquivo `.sdc` válido retorna HTTP 200 com SEG-Y byte-a-byte idêntico ao original; POST com payload inválido retorna HTTP 400; `mvn test -pl sdc-rest` verde.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-019
 
 ---
 
@@ -382,6 +389,7 @@
   - `sdc-rest/src/test/resources/fixtures/`
 - **Descrição**: Criar `SdcEndToEndTest` que: (1) faz POST para `/compress` com fixture sintética (format code 5); (2) usa o corpo da resposta como entrada para POST `/decompress`; (3) compara SHA-256 do SEG-Y restaurado com o checksum da fixture original. Também valida que `GET /health` retorna UP após startup e que `GET /benchmark` retorna JSON válido. Copiar fixtures necessárias de `sdc-fixtures` no classpath de teste via dependência.
 - **Critério de verificação**: `SdcEndToEndTest` passa 100% em `mvn verify -pl sdc-rest`; tempo de execução < 60 segundos com fixture sintética.
+- **Status**: ✅ APROVADA em 2026-05-17 — branch: feature/initial-TASK-020
 
 ---
 
