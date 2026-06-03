@@ -31,12 +31,12 @@
 
   <dependencies>
 
-    <!-- sdc-core needed by SegyFixtureGenerator to produce synthetic SEG-Y files -->
-    <dependency>
-      <groupId>com.sdc</groupId>
-      <artifactId>sdc-core</artifactId>
-      <scope>test</scope>
-    </dependency>
+    <!--
+      NOTE: sdc-fixtures has NO dependency on sdc-core. SegyFixtureGenerator
+      writes raw SEG-Y bytes with java.io only. A previous sdc-core test
+      dependency here created a build cycle (sdc-core consumes the
+      sdc-fixtures test-jar) and was removed — it was never imported.
+    -->
 
     <!-- SLF4J for generator logging -->
     <dependency>

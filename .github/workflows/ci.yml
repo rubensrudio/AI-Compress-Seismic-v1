@@ -10,16 +10,15 @@
 # Required GitHub secrets:
 #   None for this workflow (CI only, no deployment).
 #
-# Workaround — sdc-core / sdc-fixtures dependency cycle:
-#   sdc-core tests depend on fixtures that sdc-fixtures generates, and
-#   sdc-fixtures has a compile-time dependency on sdc-core.  The bootstrap
-#   sequence below breaks the cycle:
-#     1. mvn install -f sdc-fixtures/pom.xml -DskipTests  (install fixtures jar)
-#     2. mvn verify  -pl sdc-core,sdc-ai,sdc-rest,sdc-cli
-#   sdc-fixtures is NOT a reactor module (removed from the parent <modules> to
-#   break the cycle), so it must be built via its own pom (-f), not -pl.
-#   This two-step workaround is documented in
-#   the project README (sdc-core/README.md, "Dependency Cycle" section).
+# Bootstrap — sdc-fixtures test-jar:
+#   sdc-core (and sdc-bench) consume com.sdc:sdc-fixtures:tests on their test
+#   classpath for the reference .segy fixtures. sdc-fixtures is NOT a reactor
+#   module and has NO sdc-core dependency, so the order is:
+#     1. mvn install -N                                  (parent POM to .m2)
+#     2. mvn install -f sdc-fixtures/pom.xml -DskipTests (publish fixtures:tests)
+#     3. mvn verify  -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-bench -Dexec.skip=true
+#   sdc-bench is included so sdc-cli's compile dependency resolves; -Dexec.skip
+#   skips the slow JMH run (benchmarks execute only in the release workflow).
 # =============================================================================
 
 name: CI
@@ -53,24 +52,34 @@ jobs:
           distribution: "temurin"
           cache: "maven"
 
-      # Step 1 of the bootstrap: install sdc-fixtures without running its own
-      # tests (they depend on sdc-core which is not installed yet).
-      - name: Bootstrap — install sdc-fixtures (skip tests to break cycle)
+      # Step 1: install the parent POM (sdc-parent) to the local repo. Required
+      # so the EXTERNAL sdc-fixtures test-jar descriptor (its parent is
+      # sdc-parent) resolves during the verify step below.
+      - name: Bootstrap (1/3) — install parent POM
+        run: |
+          mvn install \
+            --no-transfer-progress \
+            -N
+
+      # Step 2: build + install sdc-fixtures. It has NO sdc-core dependency, so
+      # it builds standalone; the maven-jar-plugin test-jar execution publishes
+      # com.sdc:sdc-fixtures:tests, consumed by sdc-core's tests below.
+      - name: Bootstrap (2/3) — install sdc-fixtures test-jar
         run: |
           mvn install \
             --no-transfer-progress \
             -f sdc-fixtures/pom.xml \
             -DskipTests
 
-      # Step 2: verify all target modules.  sdc-core tests (including
-      # SdcRoundTripTest) now have sdc-fixtures on the local Maven repo.
-      # sdc-bench is excluded here; it runs only in the release workflow
-      # because it is slow (JMH fork process).
-      - name: Verify modules (sdc-core, sdc-ai, sdc-rest, sdc-cli)
+      # Step 3: verify all reactor modules. sdc-cli compile-depends on sdc-bench,
+      # so sdc-bench is included to build its jar; -Dexec.skip=true skips the
+      # slow JMH integration-test run (benchmarks run only in the release flow).
+      - name: Bootstrap (3/3) — verify modules
         run: |
           mvn verify \
             --no-transfer-progress \
-            -pl sdc-core,sdc-ai,sdc-rest,sdc-cli
+            -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-bench \
+            -Dexec.skip=true
 
       # ---------------------------------------------------------------------------
       # Gate (c): Correctness — SdcRoundTripTest

@@ -167,26 +167,27 @@ Angular 18 standalone SPA with Angular Material.
 
 ## Build & Test
 
-### Step 1 — Bootstrap sdc-fixtures (required once per clean environment)
+### Step 1 — Bootstrap (required once per clean environment)
 
-`sdc-fixtures` has a documented circular dependency with `sdc-core` in the Maven reactor. Install it in isolation first:
+`sdc-fixtures` is not a reactor module — `sdc-core` and `sdc-bench` consume its
+`tests` jar (the reference `.segy` fixtures) on their test classpath. Install
+the parent POM and the fixtures jar first:
 
 ```bash
-cd sdc-fixtures
-mvn install -DskipTests
-cd ..
+mvn install -N                                  # parent POM (sdc-parent)
+mvn install -f sdc-fixtures/pom.xml -DskipTests # publish sdc-fixtures:tests
 ```
 
-> You only need to repeat this step after a `mvn clean` that removes the local repository cache for `sdc-fixtures`.
+> Repeat only after a `mvn clean` that wipes these from the local repository.
 
 ### Step 2 — Build and test all Java modules
 
-```bash
-# Compile + run all unit tests (sdc-core, sdc-ai, sdc-rest, sdc-cli)
-mvn test -pl sdc-core,sdc-ai,sdc-rest,sdc-cli
+`sdc-cli` compile-depends on `sdc-bench`, so include `sdc-bench` in the reactor.
+`-Dexec.skip=true` skips the slow JMH run (see *Running Benchmarks* to run it).
 
+```bash
 # Full verify including integration tests (SdcRoundTripTest, SdcEndToEndTest)
-mvn verify -pl sdc-core,sdc-ai,sdc-rest,sdc-cli
+mvn verify -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-bench -Dexec.skip=true
 ```
 
 Expected result: all tests pass. The key test suites are:
@@ -201,11 +202,14 @@ Expected result: all tests pass. The key test suites are:
 
 ### Test individual modules
 
+After Step 1, with `sdc-core`/`sdc-ai` installed
+(`mvn install -pl sdc-core,sdc-ai -Dmaven.test.skip=true`):
+
 ```bash
-mvn test -pl sdc-rest   # 32 tests — Spring WebFlux controllers
-mvn test -pl sdc-core   # codecs, validators, container I/O
-mvn test -pl sdc-cli    # CLI commands
-mvn test -pl sdc-ai     # TF model load
+mvn test -pl sdc-rest          # 32 tests — Spring WebFlux controllers
+mvn test -pl sdc-core          # codecs, validators, container I/O
+mvn test -pl sdc-cli,sdc-bench # CLI commands (cli compile-depends on sdc-bench)
+mvn test -pl sdc-ai            # TF model load
 ```
 
 ### Step 3 — Build the Angular UI
@@ -261,8 +265,9 @@ curl -X POST http://localhost:8080/decompress \
 ### Build the fat JAR
 
 ```bash
-cd sdc-fixtures && mvn install -DskipTests && cd ..
-mvn install -pl sdc-core,sdc-ai -DskipTests
+mvn install -N
+mvn install -f sdc-fixtures/pom.xml -DskipTests
+mvn install -pl sdc-core,sdc-ai,sdc-bench -Dmaven.test.skip=true
 mvn package -pl sdc-cli -DskipTests
 ```
 
@@ -318,11 +323,12 @@ npm test -- --watch=false --browsers=ChromeHeadless
 The benchmark suite runs JMH with `@Fork(1)` (spawns a child JVM). It takes approximately 30–60 seconds.
 
 ```bash
-# Prerequisites: sdc-fixtures installed, sdc-core and sdc-ai installed
-cd sdc-fixtures && mvn install -DskipTests && cd ..
-mvn install -pl sdc-core,sdc-ai -DskipTests
+# Prerequisites: parent POM, sdc-fixtures, sdc-core and sdc-ai installed
+mvn install -N
+mvn install -f sdc-fixtures/pom.xml -DskipTests
+mvn install -pl sdc-core,sdc-ai -Dmaven.test.skip=true
 
-# Run benchmarks
+# Run benchmarks (JMH executes here — no -Dexec.skip)
 mvn verify -pl sdc-bench
 ```
 

@@ -75,21 +75,31 @@ jobs:
           distribution: "temurin"
           cache: "maven"
 
-      # Bootstrap: install sdc-fixtures without tests (dependency cycle fix).
-      - name: Bootstrap — install sdc-fixtures (skip tests)
+      # Bootstrap order:
+      #   1. install parent POM (resolves the external sdc-fixtures descriptor).
+      #   2. install sdc-fixtures (no sdc-core dep) -> publishes the
+      #      com.sdc:sdc-fixtures:tests jar consumed by sdc-core / sdc-bench.
+      #   3. install sdc-core + sdc-ai jars (deps of sdc-bench); tests skipped
+      #      here since the ci job already ran them.
+      - name: Bootstrap (1/3) — install parent POM
+        run: |
+          mvn install \
+            --no-transfer-progress \
+            -N
+
+      - name: Bootstrap (2/3) — install sdc-fixtures test-jar
         run: |
           mvn install \
             --no-transfer-progress \
             -f sdc-fixtures/pom.xml \
             -DskipTests
 
-      # Install sdc-core and sdc-ai before sdc-bench (they are dependencies).
-      - name: Install sdc-core and sdc-ai (skip tests — already ran in ci job)
+      - name: Bootstrap (3/3) — install sdc-core and sdc-ai (skip tests)
         run: |
           mvn install \
             --no-transfer-progress \
             -pl sdc-core,sdc-ai \
-            -DskipTests
+            -Dmaven.test.skip=true
 
       # Run sdc-bench via mvn verify.  The Maven Exec plugin in sdc-bench/pom.xml
       # invokes the JMH runner (BenchmarkRunner.main) which writes
