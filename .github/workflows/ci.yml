@@ -14,10 +14,11 @@
 #   sdc-core tests depend on fixtures that sdc-fixtures generates, and
 #   sdc-fixtures has a compile-time dependency on sdc-core.  The bootstrap
 #   sequence below breaks the cycle:
-#     1. mvn install -pl sdc-fixtures -DskipTests  (compile + install fixtures jar)
-#     2. mvn verify  -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-fixtures
-#   Running `mvn verify` from the root with all modules at once fails because
-#   Maven cannot resolve the cycle.  This two-step workaround is documented in
+#     1. mvn install -f sdc-fixtures/pom.xml -DskipTests  (install fixtures jar)
+#     2. mvn verify  -pl sdc-core,sdc-ai,sdc-rest,sdc-cli
+#   sdc-fixtures is NOT a reactor module (removed from the parent <modules> to
+#   break the cycle), so it must be built via its own pom (-f), not -pl.
+#   This two-step workaround is documented in
 #   the project README (sdc-core/README.md, "Dependency Cycle" section).
 # =============================================================================
 
@@ -58,18 +59,18 @@ jobs:
         run: |
           mvn install \
             --no-transfer-progress \
-            -pl sdc-fixtures \
+            -f sdc-fixtures/pom.xml \
             -DskipTests
 
       # Step 2: verify all target modules.  sdc-core tests (including
       # SdcRoundTripTest) now have sdc-fixtures on the local Maven repo.
       # sdc-bench is excluded here; it runs only in the release workflow
       # because it is slow (JMH fork process).
-      - name: Verify modules (sdc-core, sdc-ai, sdc-rest, sdc-cli, sdc-fixtures)
+      - name: Verify modules (sdc-core, sdc-ai, sdc-rest, sdc-cli)
         run: |
           mvn verify \
             --no-transfer-progress \
-            -pl sdc-core,sdc-ai,sdc-rest,sdc-cli,sdc-fixtures
+            -pl sdc-core,sdc-ai,sdc-rest,sdc-cli
 
       # ---------------------------------------------------------------------------
       # Gate (c): Correctness — SdcRoundTripTest

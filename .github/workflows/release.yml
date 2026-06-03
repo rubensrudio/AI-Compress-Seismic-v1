@@ -80,7 +80,7 @@ jobs:
         run: |
           mvn install \
             --no-transfer-progress \
-            -pl sdc-fixtures \
+            -f sdc-fixtures/pom.xml \
             -DskipTests
 
       # Install sdc-core and sdc-ai before sdc-bench (they are dependencies).
