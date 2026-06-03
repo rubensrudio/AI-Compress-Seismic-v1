@@ -1,16 +1,35 @@
 # AI-Compress-Seismic-v1
 
+[![CI](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/ci.yml/badge.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/ci.yml)
+[![Release](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/release.yml/badge.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Java 17](https://img.shields.io/badge/Java-17-orange.svg)](https://adoptium.net/)
+[![Angular 18](https://img.shields.io/badge/Angular-18-red.svg)](https://angular.dev/)
+[![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/releases/tag/v0.1.0)
+
 AI-assisted compression framework for industrial seismic datasets in SEG-Y Rev1 format. Combines deterministic signal-processing codecs with a TensorFlow Java autoencoder prediction layer to achieve high compression ratios while preserving bit-for-bit decoding fidelity.
 
 **Verified baseline (JMH, single-threaded, i7-12700H):** 76.6 MB/s sustained encode throughput · 148×–420× speedup over prior Java baselines · 100% bit-for-bit correctness against reference fixtures.
 
-Live demo: `halotechlabs.com/demo/seismic-compressor`
+Live demo: `halotechlabs.com/demo/seismic-compressor` — see [docs/DEMO.md](docs/DEMO.md).
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Visual module graph, pipeline & sequence diagrams, container format |
+| [docs/BENCHMARKS.md](docs/BENCHMARKS.md) | Benchmark method, throughput, ratios, model metrics |
+| [docs/DEMO.md](docs/DEMO.md) | Hosted, local UI, CLI and REST demos |
+| [VALIDATION.md](VALIDATION.md) | How every claim reproduces (CI, SHA-256 gate, JMH) |
+| [CHANGELOG.md](CHANGELOG.md) | Version history (Keep a Changelog) |
+| [LICENSE](LICENSE) | MIT |
 
 ---
 
 ## Table of Contents
 
 - [Architecture](#architecture)
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Build & Test](#build--test)
@@ -51,6 +70,22 @@ SEG-Y file → SegyIO.read() → TraceBlockCodec → AePredictor (residuals) →
 ```
 
 The `.sdc` container is identified by magic number `0x53444301` in the first 4 bytes.
+
+Full visual diagrams (Mermaid): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+---
+
+## Screenshots
+
+> Captured from the Angular 18 UI (`sdc-ui`) running against the local `sdc-rest` service.
+
+| Inspector — headers & waveforms | Compression preview |
+|---|---|
+| ![Inspector](docs/screenshots/inspector.png) | ![Compression](docs/screenshots/compression.png) |
+
+| Benchmark metrics |
+|---|
+| ![Benchmark](docs/screenshots/benchmark.png) |
 
 ---
 
@@ -370,3 +405,9 @@ Returns the latest JMH report metadata. All fields are `null` when no benchmark 
 | CI SSH known_hosts | Requires manual secret | Add `HALOTECHLABS_KNOWN_HOST` to GitHub repository secrets (Settings → Secrets → Actions). Value: output of `ssh-keyscan halotechlabs.com`. |
 | SEG-Y Rev2 / SEG-D | Out of scope v1 | Only SEG-Y Rev1 is supported. |
 | Streaming / real-time | Out of scope v1 | Batch-only. |
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE). © 2026 Rubens Rudio.
