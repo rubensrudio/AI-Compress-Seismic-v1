@@ -184,11 +184,37 @@ jobs:
   #   HALOTECHLABS_REGISTRY   — FQDN of the Docker registry
   #                             (default: registry.halotechlabs.com)
   # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Gate — detect whether the deploy secret is configured.
+  # Secrets cannot be referenced in a job-level `if:`, so we surface presence
+  # as a job output here and gate the docker job on it. This lets forks and
+  # repos without HALOTECHLABS_DEPLOY_KEY publish a release without the docker
+  # job failing on an empty ssh-private-key.
+  # ---------------------------------------------------------------------------
+  check-secrets:
+    name: Check deploy secret
+    runs-on: ubuntu-latest
+    outputs:
+      has_deploy_key: ${{ steps.check.outputs.has_deploy_key }}
+    steps:
+      - id: check
+        env:
+          DEPLOY_KEY: ${{ secrets.HALOTECHLABS_DEPLOY_KEY }}
+        run: |
+          if [ -n "${DEPLOY_KEY}" ]; then
+            echo "has_deploy_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_deploy_key=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::HALOTECHLABS_DEPLOY_KEY not set — skipping the docker build/push job."
+          fi
+
   docker:
     name: Build & Push sdc-ui Docker image
     # B3 fix: docker only runs after both ci AND benchmark succeed, so that
     # latest.json is guaranteed to exist before the image is published.
-    needs: [ci, benchmark]
+    # Also skipped entirely when the deploy secret is absent (check-secrets).
+    needs: [ci, benchmark, check-secrets]
+    if: ${{ needs.check-secrets.outputs.has_deploy_key == 'true' }}
     runs-on: ubuntu-latest
 
     env:
