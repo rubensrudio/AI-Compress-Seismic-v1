@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/ci.yml/badge.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/ci.yml)
 [![Release](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/release.yml/badge.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/actions/workflows/release.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Java 17](https://img.shields.io/badge/Java-17-orange.svg)](https://adoptium.net/)
 [![Angular 18](https://img.shields.io/badge/Angular-18-red.svg)](https://angular.dev/)
 [![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/releases/tag/v0.1.0)
@@ -22,7 +22,7 @@ Live demo: `halotechlabs.com/demo/seismic-compressor` — see [docs/DEMO.md](doc
 | [docs/DEMO.md](docs/DEMO.md) | Hosted, local UI, CLI and REST demos |
 | [VALIDATION.md](VALIDATION.md) | How every claim reproduces (CI, SHA-256 gate, JMH) |
 | [CHANGELOG.md](CHANGELOG.md) | Version history (Keep a Changelog) |
-| [LICENSE](LICENSE) | MIT |
+| [LICENSE](LICENSE) | Apache 2.0 |
 
 ---
 
@@ -416,4 +416,4 @@ Returns the latest JMH report metadata. All fields are `null` when no benchmark 
 
 ## License
 
-Released under the [MIT License](LICENSE). © 2026 Rubens Rudio.
+Released under the [Apache License 2.0](LICENSE). © 2026 Rubens Rudio.
