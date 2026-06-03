@@ -110,3 +110,6 @@ logs/
 *.bak
 *.swp
 *.orig
+
+# Playwright CLI session artifacts
+.playwright-cli/
