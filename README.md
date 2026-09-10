@@ -7,9 +7,9 @@
 [![Angular 18](https://img.shields.io/badge/Angular-18-red.svg)](https://angular.dev/)
 [![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue.svg)](https://github.com/rubensrudio/AI-Compress-Seismic-v1/releases/tag/v0.1.0)
 
-AI-assisted compression framework for industrial seismic datasets in SEG-Y Rev1 format. Combines deterministic signal-processing codecs with a TensorFlow Java autoencoder prediction layer to achieve high compression ratios while preserving bit-for-bit decoding fidelity.
+AI-assisted compression framework for industrial seismic datasets in SEG-Y Rev1 format. Combines deterministic signal-processing codecs with a TensorFlow Java autoencoder prediction layer and configurable lossy quantisation.
 
-**Verified baseline (JMH, single-threaded, i7-12700H):** 76.6 MB/s sustained encode throughput · 148×–420× speedup over prior Java baselines · 100% bit-for-bit correctness against reference fixtures.
+**Measured locally (JMH, single-threaded, Apple M5):** 52.81 MB/s encode · 141.20 MB/s decode · 1.54× compression with the `BALANCED` profile. See [Running Benchmarks](#running-benchmarks) for the complete result and fidelity caveats.
 
 Live demo: `halotechlabs.com/demo/seismic-compressor` — see [docs/DEMO.md](docs/DEMO.md).
 
@@ -97,11 +97,11 @@ Full visual diagrams (Mermaid): [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - `SegyValidator`: validates file structure before compression (magic byte, minimum size, format code)
 - `TraceBlockCodec`: linear quantisation codec with per-trace min/max normalization; configurable quantisation bits via `CompressionProfile`
 - `CompressionProfile`: three built-in profiles
-  - `HIGH_QUALITY` — 16-bit quantisation (lossless round-trip)
-  - `BALANCED` — 12-bit quantisation
-  - `HIGH_COMPRESSION` — 8-bit quantisation
+  - `HIGH_QUALITY` — 16-bit quantisation (highest fidelity, but not bit-for-bit lossless)
+  - `BALANCED` — 12-bit quantisation (affected by the decode bit-depth limitation below)
+  - `HIGH_COMPRESSION` — 8-bit quantisation (affected by the same limitation)
 - `SdcContainerV1`: binary container format with magic number, version, and trace block metadata
-- `SdcRoundTripTest`: 14 parametric tests over 3 fixture sizes (minimal / medium / large) with SHA-256 integrity verification
+- `SdcRoundTripTest`: verifies fixture integrity, deterministic output, size stability and bit-for-bit preservation of SEG-Y headers over 3 fixture sizes; quantised sample values are not byte-exact
 
 ### sdc-ai — AI Predictor
 
@@ -194,7 +194,7 @@ Expected result: all tests pass. The key test suites are:
 
 | Suite | Module | Tests | Coverage |
 |---|---|---|---|
-| `SdcRoundTripTest` | sdc-core | 14 (parametric, 3 fixture sizes) | SHA-256 round-trip fidelity |
+| `SdcRoundTripTest` | sdc-core | 14 (parametric, 3 fixture sizes) | Fixture SHA-256, deterministic output and exact header preservation; samples are quantised |
 | `SdcEndToEndTest` | sdc-rest | 3 | E2E compress→decompress via HTTP |
 | `BenchmarkCommandTest` | sdc-cli | 30 | CLI output and exit codes |
 | `SegyValidatorTest` | sdc-core | — | Format validation edge cases |
@@ -342,15 +342,39 @@ java -cp sdc-bench/target/sdc-bench-1.0.0-SNAPSHOT-jar-with-dependencies.jar \
      sdc-bench/target/jmh-results/latest.json
 ```
 
-### Reference numbers (i7-12700H / 16 GB DDR5 / Windows 11)
+### Measured result (2026-09-09)
 
 | Benchmark | ops/s | Throughput |
 |---|---|---|
-| `SdcEncodeBenchmark` | ~464–493 | ~22–23 MB/s |
-| `SdcDecodeBenchmark` | ~1005 | ~47 MB/s |
-| Combined sustained | — | **76.6 MB/s** |
+| `SdcEncodeBenchmark.encodeFullPipeline` | 1,107.410 | **52.81 MB/s** |
+| `SdcDecodeBenchmark.decodeFullPipeline` | 2,961.217 | **141.20 MB/s** |
 
-Target: ≥ 76.6 MB/s. C++ reference baseline: 101.6 MB/s (Java ≈ 0.75× of native — intentional trade for portability).
+Throughput is sample-payload throughput: `ops/s × 50,000 / 1,048,576`. Encode is
+below the project's 76.6 MB/s target on this run. Encode and decode are separate
+benchmarks and must not be added into a "combined sustained" figure.
+
+The same synthetic fixture was encoded and decoded once per profile to measure
+whole-file compression and sample fidelity:
+
+| Profile | Input → SDC | Compression | Savings | Sample PSNR | Exact samples | Exact file |
+|---|---:|---:|---:|---:|---:|---|
+| `HIGH_QUALITY` (16 bit) | 77,600 → 53,934 B | **1.439×** | 30.50% | **80.75 dB** | 0.80% | No |
+| `BALANCED` (12 bit; JMH profile) | 77,600 → 50,434 B | **1.539×** | 35.01% | **3.57 dB** | 0.80% | No |
+| `HIGH_COMPRESSION` (8 bit) | 77,600 → 36,134 B | **2.148×** | 53.44% | **3.04 dB** | 0.80% | No |
+
+PSNR uses the peak absolute input sample and RMSE across all 12,500 samples.
+All 3,600 file-header bytes and all 24,000 trace-header bytes are restored
+exactly. The file as a whole is not bit-for-bit lossless because trace samples
+are quantised. The very low `BALANCED` and `HIGH_COMPRESSION` PSNR is caused by
+the current container not recording quantisation bit depth: decode assumes 16
+bits for data encoded at 12 or 8 bits.
+
+Measurement environment: commit `e19a5f641521806da64bf1acfe43376c48a50d08`,
+Apple M5 (10 cores), 24 GB RAM, macOS 26.6.2, OpenJDK 17.0.20.1, JMH 1.37,
+1 thread, 1 fork, 1 × 1 s warmup and 2 × 2 s measurement. Fixture: synthetic
+SEG-Y Rev1 IEEE float32, 100 traces × 125 samples, identity predictor. With only
+two measurement iterations JMH does not provide a useful confidence interval;
+results are a local snapshot, not a cross-hardware guarantee.
 
 ---
 
@@ -389,15 +413,19 @@ Returns the latest JMH report metadata. All fields are `null` when no benchmark 
 
 ```json
 {
-  "encode_ops_s": 480.5,
-  "decode_ops_s": 1005.2,
-  "throughput_mb_s": 76.6,
-  "compression_ratio": 3.2,
-  "dataset_size_mb": 1752.4,
-  "target_mb_s": 76.6,
-  "meets_target": true
+  "throughput_mb_s": 52.81,
+  "compression_ratio": null,
+  "dataset_size_gb": null,
+  "speedup_vs_prior_java_baseline": null,
+  "timestamp": null,
+  "version": null,
+  "reference_hardware": null
 }
 ```
+
+The current REST result store reads only encode throughput from the JMH JSON;
+the compression and fidelity measurements in the table above are not exposed by
+`GET /benchmark`.
 
 ---
 
@@ -405,7 +433,7 @@ Returns the latest JMH report metadata. All fields are `null` when no benchmark 
 
 | Limitation | Status | Notes |
 |---|---|---|
-| Quantisation bits not stored in container | Open (TAC-XX) | `LinearQuantizer.decode()` always assumes 16 bits. Use `HIGH_QUALITY` profile for lossless round-trips. `BALANCED` and `HIGH_COMPRESSION` may silently corrupt samples on decode until fixed. |
+| Quantisation bits not stored in container | Open (TAC-XX) | `LinearQuantizer.decode()` always assumes 16 bits. `HIGH_QUALITY` gives the highest measured fidelity but is still quantised and not byte-exact. `BALANCED` and `HIGH_COMPRESSION` decode with severe amplitude error until the bit depth is stored. |
 | Parallel execution race condition | Deferred to v2 | ForkJoinPool mode is disabled. All processing is single-threaded. |
 | Autoencoder stub (identity) | Production TODO | `saved_model.pb` is a placeholder. Replace with a trained model + `variables/` before release. See `sdc-ai/README.md` for the retraining guide. |
 | CI SSH known_hosts | Requires manual secret | Add `HALOTECHLABS_KNOWN_HOST` to GitHub repository secrets (Settings → Secrets → Actions). Value: output of `ssh-keyscan halotechlabs.com`. |
